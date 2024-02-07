@@ -35,7 +35,7 @@ export type ContributorOptions = {
 
 export type DoiData = {
   doi: string;
-  resource?: string;
+  resource: string;
   zip?: string;
   pdf?: string;
   xml?: string;

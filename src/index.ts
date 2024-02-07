@@ -103,6 +103,20 @@ export function conferencePaperXml({
   if (contributors) children.push(contributors);
   if (title) children.push(e('titles', [e('title', title)]));
   if (abstract) children.push(abstract);
+  if (pages) {
+    const pageChildren = [e('first_page', pages.first_page)];
+    if (pages.last_page) pageChildren.push(e('last_page', pages.last_page));
+    if (pages.other_pages) pageChildren.push(e('other_pages', pages.other_pages));
+    children.push(e('pages', pageChildren));
+  }
+  if (license) {
+    children.push(
+      e('ai:program', { name: 'AccessIndicators' }, [
+        e('ai:free_to_read'),
+        e('ai:license_ref', { applies_to: 'vor' }, license),
+      ]),
+    );
+  }
   if (doi_data) {
     const doiChildren = [e('doi', doi_data.doi)];
     if (doi_data.resource) {
@@ -146,20 +160,6 @@ export function conferencePaperXml({
       }),
     );
   }
-  if (pages) {
-    const pageChildren = [e('first_page', pages.first_page)];
-    if (pages.last_page) pageChildren.push(e('last_page', pages.last_page));
-    if (pages.other_pages) pageChildren.push(e('other_pages', pages.other_pages));
-    children.push(e('pages', pageChildren));
-  }
-  if (license) {
-    children.push(
-      e('ai:program', { name: 'AccessIndicators' }, [
-        e('ai:free_to_read'),
-        e('ai:license_ref', { applies_to: 'vor' }, license),
-      ]),
-    );
-  }
   if (citations) {
     children.push(
       e(
@@ -182,7 +182,7 @@ export function conferencePaperFromMyst(myst: PageFrontmatter) {
     license: license?.content?.url,
   };
   if (doi) {
-    paperOpts.doi_data = { doi };
+    paperOpts.doi_data = { doi, resource: `https://doi.curvenote.com/${doi}` };
   }
   if (biblio?.first_page) {
     paperOpts.pages = { first_page: `${biblio.first_page}` };
