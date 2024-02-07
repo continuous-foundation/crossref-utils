@@ -29,6 +29,6 @@ const numbers = '0123456789';
 const nanoidAZ = customAlphabet(alpha, 4);
 const nanoidAZ9 = customAlphabet(numbers, 4);
 
-export function generateDoi(prefix = '10.62329') {
+export function generateDoi(prefix: string) {
   return `${prefix}/${nanoidAZ()}${nanoidAZ9()}`;
 }
