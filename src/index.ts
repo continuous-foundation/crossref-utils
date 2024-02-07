@@ -10,6 +10,8 @@ import type {
 } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
 
+export * from './types.js';
+export { generateDoi } from './utils.js';
 export { default as version } from './version.js';
 
 export class DoiBatch {
