@@ -2,7 +2,7 @@ import path from 'path';
 import which from 'which';
 import fs from 'node:fs';
 import fetch from 'node-fetch';
-import type { ISession } from 'myst-cli-utils';
+import type { ISession, LoggerDE } from 'myst-cli-utils';
 import { makeExecutable, writeFileToFolder } from 'myst-cli-utils';
 import chalk from 'chalk';
 import AdmZip from 'adm-zip';
@@ -57,6 +57,30 @@ export function isXmllintAvailable() {
 }
 
 /**
+ * Create a logger that hides known error messages
+ */
+export function createXmllintLogger(session: ISession): LoggerDE {
+  const logger = {
+    debug(data: string) {
+      const line = data.trim();
+      if (!line) return;
+      session.log.debug(data);
+    },
+    error(data: string) {
+      const line = data.trim();
+      if (!line) return;
+      const lower = line.toLowerCase();
+      if (lower.includes('skipping import of schema') || lower.startsWith('- validates')) {
+        session.log.debug(line);
+        return;
+      }
+      session.log.error(data);
+    },
+  };
+  return logger;
+}
+
+/**
  * Run xmllint validation
  */
 export async function xmllintValidate(session: Pick<ISession, 'log'>, file: string, xsd: string) {
@@ -72,7 +96,10 @@ export async function xmllintValidate(session: Pick<ISession, 'log'>, file: stri
     // First drop DOCTYPE with DTD in it - we have already fetched the DTD
     const dropDtdCommand = `xmllint --dropdtd`;
     const validateCommand = `xmllint --noout --schema ${xsd}`;
-    await makeExecutable(`${dropDtdCommand} ${file} | ${validateCommand} -`, session.log)();
+    await makeExecutable(
+      `${dropDtdCommand} ${file} | ${validateCommand} -`,
+      createXmllintLogger(session),
+    )();
   } catch {
     return false;
   }
