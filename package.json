@@ -24,7 +24,7 @@
     "url": "git+https://github.com/curvenote/crossref-utils.git"
   },
   "bin": {
-    "crossref": "./dist/crossref.cjs"
+    "crossref": "dist/crossref.cjs"
   },
   "scripts": {
     "copy:version": "echo \"const version = '\"$npm_package_version\"';\nexport default version;\" > src/version.ts",
