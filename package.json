@@ -1,6 +1,6 @@
 {
   "name": "crossref-utils",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "MIT",
   "description": "Utilities for depositing crossref metadata",
   "author": "Rowan Cockett <rowan@curvenote.com>",
