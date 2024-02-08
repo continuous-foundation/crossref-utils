@@ -7,6 +7,7 @@ import type {
   ConferencePaper,
   ContributorOptions,
   DoiBatchOptions,
+  PublicationDate,
 } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
 
@@ -89,6 +90,40 @@ export function contributorsXmlFromMyst(
   );
 }
 
+function paddedDateString(num: number | string | undefined, length: number, message: string) {
+  if (num == null) return undefined;
+  const padded = typeof num === 'number' ? String(num) : num;
+  if (padded.length > length) throw new Error(message);
+  return padded.padStart(length, '0');
+}
+
+export function publicationDateXml(date?: PublicationDate) {
+  if (!date) return undefined;
+  if (date instanceof Date) {
+    return publicationDateXml({
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+    });
+  }
+  const month = paddedDateString(date.month, 2, 'date.month must be a 2 digit string');
+  const day = paddedDateString(date.day, 2, 'date.day must be a 2 digit string');
+  const year = typeof date.year === 'number' ? String(date.year) : date.year;
+  if (year.length !== 4) throw new Error('date.year must be a 4 digit string');
+  if (day && !(Number.parseInt(day, 10) >= 1 && Number.parseInt(day, 10) <= 31)) {
+    throw new Error('date.day must be a 2 digit string between "01" and "31"');
+  }
+  if (month && !(Number.parseInt(month, 10) >= 1 && Number.parseInt(month, 10) <= 12)) {
+    // Note that there are ways to say "Spring" and "First Quarter", not dealt with here
+    throw new Error('date.month must be a 2 digit string between "01" and "12"');
+  }
+  return e('publication_date', { media_type: date.media_type ?? 'online' }, [
+    month ? e('month', month) : undefined,
+    day ? e('day', day) : undefined,
+    e('year', year),
+  ]);
+}
+
 export function conferencePaperXml({
   contributors,
   title,
@@ -103,6 +138,9 @@ export function conferencePaperXml({
   if (contributors) children.push(contributors);
   if (title) children.push(e('titles', [e('title', title)]));
   if (abstract) children.push(abstract);
+  if (publication_dates) {
+    children.push(...publication_dates.map(publicationDateXml).filter((d): d is Element => !!d));
+  }
   if (pages) {
     const pageChildren = [e('first_page', pages.first_page)];
     if (pages.last_page) pageChildren.push(e('last_page', pages.last_page));
@@ -149,17 +187,6 @@ export function conferencePaperXml({
     }
     children.push(e('doi_data', doiChildren));
   }
-  if (publication_dates) {
-    children.push(
-      ...publication_dates.map((date) => {
-        return e('publication_date', { media_type: date.media_type }, [
-          e('month', date.month),
-          e('day', date.day),
-          e('year', date.year),
-        ]);
-      }),
-    );
-  }
   if (citations) {
     children.push(
       e(
@@ -174,13 +201,17 @@ export function conferencePaperXml({
 }
 
 export function conferencePaperFromMyst(myst: PageFrontmatter) {
-  const { title, biblio, license, doi } = myst;
+  const { title, biblio, license, doi, date } = myst;
   const contributors = contributorsXmlFromMyst(myst);
   const paperOpts: ConferencePaper = {
     contributors,
     title,
-    license: license?.content?.url,
+    publication_dates: typeof date === 'string' ? [new Date(date)] : undefined,
   };
+  if (license && license.content?.CC) {
+    // Only put in CC licenses at this time
+    paperOpts.license = license.content.url;
+  }
   if (doi) {
     paperOpts.doi_data = { doi, resource: `https://doi.curvenote.com/${doi}` };
   }
@@ -211,11 +242,7 @@ export function conferenceXml({
     e('proceedings_metadata', [
       e('proceedings_title', proceedings.title),
       e('publisher', [e('publisher_name', proceedings.publisher.name)]),
-      e('publication_date', { media_type: 'online' }, [
-        e('month', String(proceedings.publication_date.month).padStart(2, '0')),
-        e('day', String(proceedings.publication_date.day).padStart(2, '0')),
-        e('year', String(proceedings.publication_date.year)),
-      ]),
+      publicationDateXml(proceedings.publication_date),
       e('noisbn', { reason: 'archive_volume' }),
       e('doi_data', [e('doi', doi_data.doi), e('resource', doi_data.resource)]),
     ]),

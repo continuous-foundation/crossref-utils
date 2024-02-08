@@ -41,6 +41,15 @@ export type DoiData = {
   xml?: string;
 };
 
+export type PublicationDate =
+  | Date
+  | {
+      media_type?: 'online' | 'print' | 'other'; // Default is `online`
+      month?: string | number; // will be a 2 digit string-number with leading zero
+      day?: string | number; // will be a 2 digit string-number with leading zero
+      year: string | number;
+    };
+
 export type ConferencePaper = {
   contributors?: Element; // Already a 'contributors' element
   title?: string;
@@ -53,12 +62,7 @@ export type ConferencePaper = {
     other_pages?: string;
   };
   license?: string; // License URL
-  publication_dates?: {
-    media_type: string;
-    month: string; // 2 digit number, even with leading zero, hence string
-    day: string; // 2 digit number, even with leading zero, hence string
-    year: string;
-  }[];
+  publication_dates?: PublicationDate[];
 };
 
 export type ConferenceOptions = {
@@ -72,7 +76,7 @@ export type ConferenceOptions = {
   proceedings: {
     title: string;
     publisher: { name: string };
-    publication_date: { year: number; month: number; day: number };
+    publication_date: PublicationDate;
   };
   doi_data: DoiData;
   conference_papers?: Element[];
