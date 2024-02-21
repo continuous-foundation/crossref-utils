@@ -200,13 +200,19 @@ export function conferencePaperXml({
   return e('conference_paper', children);
 }
 
-export function conferencePaperFromMyst(myst: PageFrontmatter) {
+export function conferencePaperFromMyst(
+  myst: PageFrontmatter,
+  citations?: Record<string, string>,
+  abstract?: Element,
+) {
   const { title, biblio, license, doi, date } = myst;
   const contributors = contributorsXmlFromMyst(myst);
   const paperOpts: ConferencePaper = {
     contributors,
     title,
     publication_dates: typeof date === 'string' ? [new Date(date)] : undefined,
+    license: license?.content?.url,
+    abstract,
   };
   if (license && license.content?.CC) {
     // Only put in CC licenses at this time
@@ -220,6 +226,9 @@ export function conferencePaperFromMyst(myst: PageFrontmatter) {
     if (biblio.last_page) {
       paperOpts.pages.last_page = `${biblio.last_page}`;
     }
+  }
+  if (citations && Object.keys(citations).length) {
+    paperOpts.citations = citations;
   }
   return conferencePaperXml(paperOpts);
 }
