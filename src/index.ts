@@ -27,6 +27,8 @@ export class DoiBatch {
         version: '4.4.2',
         xmlns: 'http://www.crossref.org/schema/4.4.2',
         'xmlns:jats': 'http://www.ncbi.nlm.nih.gov/JATS1',
+        'xmlns:mml': 'http://www.w3.org/1998/Math/MathML',
+        'xmlns:xlink': 'http://www.w3.org/1999/xlink',
         'xmlns:ai': 'http://www.crossref.org/AccessIndicators.xsd',
         'xsi:schemaLocation':
           'http://www.crossref.org/schema/4.4.2 http://www.crossref.org/schemas/crossref4.4.2.xsd',
