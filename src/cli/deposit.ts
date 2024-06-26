@@ -13,7 +13,7 @@ import { u } from 'unist-builder';
 import type { Element } from 'xast';
 import { DoiBatch } from '../batch.js';
 import { preprintFromMyst } from '../preprint.js';
-import { element2JatsUnist } from '../utils.js';
+import { element2JatsUnist, transformXrefToLink } from './utils.js';
 
 export async function deposit(
   session: ISession,
@@ -119,6 +119,7 @@ export async function deposit(
   let abstract: Element | undefined;
   const abstractPart = extractPart(content[0].mdast, 'abstract');
   if (abstractPart) {
+    transformXrefToLink(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
     abstract = u(
