@@ -93,17 +93,23 @@ export async function deposit(
         writeFiles: false,
       },
     );
-    const resp = await inquirer.prompt([
-      {
-        name: 'depositFile',
-        type: 'list',
-        message: 'File:',
-        choices: filterPages(project).map(({ file }) => {
-          return { name: path.relative('.', file), value: file };
-        }),
-      },
-    ]);
-    depositFile = resp.depositFile;
+    const pages = filterPages(project);
+    if (pages.length === 0) throw new Error('No MyST pages found');
+    if (pages.length === 1) {
+      depositFile = pages[0].file;
+    } else {
+      const resp = await inquirer.prompt([
+        {
+          name: 'depositFile',
+          type: 'list',
+          message: 'File:',
+          choices: filterPages(project).map(({ file }) => {
+            return { name: path.relative('.', file), value: file };
+          }),
+        },
+      ]);
+      depositFile = resp.depositFile;
+    }
   }
   const content = await getFileContent(session, [depositFile], {
     projectPath,
@@ -126,6 +132,7 @@ export async function deposit(
   content[0].references.cite?.order.forEach((key) => {
     const value = content[0].references.cite?.data[key].doi;
     if (value) dois[key] = value;
+    else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
   });
 
   const body = preprintFromMyst(content[0].frontmatter, dois, abstract);
