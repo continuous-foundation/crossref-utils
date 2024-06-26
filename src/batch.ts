@@ -38,7 +38,7 @@ export class DoiBatch {
   }
 
   get body() {
-    return select('body', this.tree);
+    return select('body', this.tree as any) as Element;
   }
 
   toXml() {
