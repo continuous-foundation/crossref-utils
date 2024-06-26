@@ -50,18 +50,25 @@ export type PublicationDate =
       year: string | number;
     };
 
-export type ConferencePaper = {
+export type Paper = {
   contributors?: Element; // Already a 'contributors' element
   title?: string;
   abstract?: Element;
   doi_data?: DoiData;
   citations?: Record<string, string>; // For now, this is { key: doi }
+  license?: string; // License URL
+};
+
+export type Preprint = Paper & {
+  date?: PublicationDate;
+};
+
+export type ConferencePaper = Paper & {
   pages?: {
     first_page: string;
     last_page?: string;
     other_pages?: string;
   };
-  license?: string; // License URL
   publication_dates?: PublicationDate[];
 };
 

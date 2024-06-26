@@ -59,7 +59,7 @@ export function isXmllintAvailable() {
 /**
  * Create a logger that hides known error messages
  */
-export function createXmllintLogger(session: ISession): LoggerDE {
+export function createXmllintLogger(session: Pick<ISession, 'log'>): LoggerDE {
   const logger = {
     debug(data: string) {
       const line = data.trim();
