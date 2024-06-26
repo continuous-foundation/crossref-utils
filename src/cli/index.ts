@@ -3,9 +3,11 @@ import { Command } from 'commander';
 import version from '../version.js';
 import { addParseCLI } from './parse.js';
 import { addValidateCLI } from './validate.js';
+import { addDepositCLI } from './deposit.js';
 
 const program = new Command();
 
+addDepositCLI(program);
 addParseCLI(program);
 addValidateCLI(program);
 

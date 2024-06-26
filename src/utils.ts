@@ -32,3 +32,30 @@ const nanoidAZ9 = customAlphabet(numbers, 4);
 export function generateDoi(prefix: string) {
   return `${prefix}/${nanoidAZ()}${nanoidAZ9()}`;
 }
+
+type JatsAttributes = Record<string, string | undefined>;
+
+type JatsElement = {
+  type: 'element' | 'text' | 'cdata';
+  name?: string;
+  text?: string;
+  cdata?: string;
+  attributes?: JatsAttributes;
+  elements?: JatsElement[];
+};
+
+type Node = { type: string; value?: string; children?: Node[] };
+
+export function element2JatsUnist(element: JatsElement): Node {
+  if (element.type === 'text' && element.text) {
+    return u('text', element.text);
+  }
+  if (element.name && element.elements) {
+    return u(
+      'element',
+      { name: `jats:${element.name}`, attributes: element.attributes },
+      element.elements.map((e) => element2JatsUnist(e)),
+    );
+  }
+  throw new Error(`Invalid Jats element: ${element}`);
+}
