@@ -20,7 +20,7 @@ export class DoiBatch {
         'xmlns:xlink': 'http://www.w3.org/1999/xlink',
         'xmlns:ai': 'http://www.crossref.org/AccessIndicators.xsd',
         'xsi:schemaLocation':
-          'http://www.crossref.org/schema/5.3.1 http://www.crossref.org/schemas/crossref4.4.2.xsd',
+          'http://www.crossref.org/schema/5.3.1 http://www.crossref.org/schemas/crossref5.3.1.xsd',
       },
       [
         e('head', {}, [
