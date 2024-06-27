@@ -18,6 +18,12 @@ export type ContributorOptions = {
     id: string;
     name: string;
     institution?: string;
+    ror?: string;
+    isni?: string;
+    department?: string;
+    city?: string;
+    state?: string;
+    country?: string;
   }[];
   sequence: 'first' | 'additional';
   contributor_role:

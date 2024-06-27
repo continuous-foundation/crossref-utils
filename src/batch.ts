@@ -13,14 +13,14 @@ export class DoiBatch {
       'doi_batch',
       {
         'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-        version: '4.4.2',
-        xmlns: 'http://www.crossref.org/schema/4.4.2',
+        version: '5.3.1',
+        xmlns: 'http://www.crossref.org/schema/5.3.1',
         'xmlns:jats': 'http://www.ncbi.nlm.nih.gov/JATS1',
         'xmlns:mml': 'http://www.w3.org/1998/Math/MathML',
         'xmlns:xlink': 'http://www.w3.org/1999/xlink',
         'xmlns:ai': 'http://www.crossref.org/AccessIndicators.xsd',
         'xsi:schemaLocation':
-          'http://www.crossref.org/schema/4.4.2 http://www.crossref.org/schemas/crossref4.4.2.xsd',
+          'http://www.crossref.org/schema/5.3.1 http://www.crossref.org/schemas/crossref4.4.2.xsd',
       },
       [
         e('head', {}, [
