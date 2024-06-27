@@ -17,6 +17,7 @@ import { dateXml } from './dates.js';
 export function preprintXml({
   contributors,
   title,
+  subtitle,
   abstract,
   doi_data,
   citations,
@@ -29,7 +30,9 @@ export function preprintXml({
   if (!doi_data?.doi) throw new Error('Missing required field: doi');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
-  children.push(e('titles', [e('title', title)]));
+  const titles = [e('title', title)];
+  if (subtitle) titles.push(e('subtitle', subtitle));
+  children.push(e('titles', titles));
   children.push(posted_date);
   if (abstract) children.push(abstract);
   if (license) {
@@ -86,11 +89,12 @@ export function preprintFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ) {
-  const { title, license, doi, date } = myst;
+  const { title, subtitle, license, doi, date } = myst;
   const contributors = contributorsXmlFromMyst(myst);
   const paperOpts: Preprint = {
     contributors,
     title,
+    subtitle,
     date: typeof date === 'string' ? new Date(date) : undefined,
     license: license?.content?.url,
     abstract,

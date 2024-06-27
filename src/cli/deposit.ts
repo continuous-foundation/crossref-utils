@@ -111,13 +111,13 @@ export async function deposit(
       depositFile = resp.depositFile;
     }
   }
-  const content = await getFileContent(session, [depositFile], {
+  const [{ mdast, references, frontmatter }] = await getFileContent(session, [depositFile], {
     projectPath,
     imageExtensions: [],
   });
 
   let abstract: Element | undefined;
-  const abstractPart = extractPart(content[0].mdast, 'abstract');
+  const abstractPart = extractPart(mdast, 'abstract');
   if (abstractPart) {
     transformXrefToLink(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
@@ -130,13 +130,23 @@ export async function deposit(
   }
 
   const dois: Record<string, string> = {};
-  content[0].references.cite?.order.forEach((key) => {
-    const value = content[0].references.cite?.data[key].doi;
+  references.cite?.order.forEach((key) => {
+    const value = references.cite?.data[key].doi;
     if (value) dois[key] = value;
     else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
   });
 
-  const body = preprintFromMyst(content[0].frontmatter, dois, abstract);
+  const projectFrontmatter = selectors.selectLocalProjectConfig(
+    session.store.getState(),
+    projectPath,
+  );
+  // Prioritize project title over page title
+  const title = projectFrontmatter?.title ?? frontmatter.title;
+  // Prioritize project subtitle over page subtitle unless project has no title
+  const subtitle = projectFrontmatter?.title
+    ? projectFrontmatter?.subtitle ?? undefined
+    : frontmatter.subtitle;
+  const body = preprintFromMyst({ ...frontmatter, title, subtitle }, dois, abstract);
 
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },

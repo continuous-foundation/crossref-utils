@@ -17,6 +17,7 @@ import { publicationDateXml } from './dates.js';
 export function conferencePaperXml({
   contributors,
   title,
+  subtitle,
   abstract,
   doi_data,
   citations,
@@ -24,9 +25,13 @@ export function conferencePaperXml({
   license,
   publication_dates,
 }: ConferencePaper) {
+  if (!title) throw new Error('Missing required field: title');
+  if (!doi_data?.doi) throw new Error('Missing required field: doi');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
-  if (title) children.push(e('titles', [e('title', title)]));
+  const titles = [e('title', title)];
+  if (subtitle) titles.push(e('subtitle', subtitle));
+  children.push(e('titles', titles));
   if (abstract) children.push(abstract);
   if (publication_dates) {
     children.push(...publication_dates.map(publicationDateXml).filter((d): d is Element => !!d));
@@ -45,38 +50,34 @@ export function conferencePaperXml({
       ]),
     );
   }
-  if (doi_data) {
-    const doiChildren = [e('doi', doi_data.doi)];
-    if (doi_data.resource) {
-      doiChildren.push(e('resource', { content_version: 'vor' }, doi_data.resource));
-    }
-    if (doi_data.xml || doi_data.pdf || doi_data.zip) {
-      const collectionChildren = [];
-      if (doi_data.xml) {
-        collectionChildren.push(
-          e('item', [
-            e('resource', { mime_type: 'text/xml', content_version: 'vor' }, doi_data.xml),
-          ]),
-        );
-      }
-      if (doi_data.pdf) {
-        collectionChildren.push(
-          e('item', [
-            e('resource', { mime_type: 'application/pdf', content_version: 'vor' }, doi_data.pdf),
-          ]),
-        );
-      }
-      if (doi_data.zip) {
-        collectionChildren.push(
-          e('item', [
-            e('resource', { mime_type: 'application/zip', content_version: 'vor' }, doi_data.zip),
-          ]),
-        );
-      }
-      doiChildren.push(e('collection', { property: 'text-mining' }, collectionChildren));
-    }
-    children.push(e('doi_data', doiChildren));
+  const doiChildren = [e('doi', doi_data.doi)];
+  if (doi_data.resource) {
+    doiChildren.push(e('resource', { content_version: 'vor' }, doi_data.resource));
   }
+  if (doi_data.xml || doi_data.pdf || doi_data.zip) {
+    const collectionChildren = [];
+    if (doi_data.xml) {
+      collectionChildren.push(
+        e('item', [e('resource', { mime_type: 'text/xml', content_version: 'vor' }, doi_data.xml)]),
+      );
+    }
+    if (doi_data.pdf) {
+      collectionChildren.push(
+        e('item', [
+          e('resource', { mime_type: 'application/pdf', content_version: 'vor' }, doi_data.pdf),
+        ]),
+      );
+    }
+    if (doi_data.zip) {
+      collectionChildren.push(
+        e('item', [
+          e('resource', { mime_type: 'application/zip', content_version: 'vor' }, doi_data.zip),
+        ]),
+      );
+    }
+    doiChildren.push(e('collection', { property: 'text-mining' }, collectionChildren));
+  }
+  children.push(e('doi_data', doiChildren));
   if (citations) {
     children.push(
       e(
@@ -95,11 +96,12 @@ export function conferencePaperFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ) {
-  const { title, biblio, license, doi, date } = myst;
+  const { title, subtitle, biblio, license, doi, date } = myst;
   const contributors = contributorsXmlFromMyst(myst);
   const paperOpts: ConferencePaper = {
     contributors,
     title,
+    subtitle,
     publication_dates: typeof date === 'string' ? [new Date(date)] : undefined,
     license: license?.content?.url,
     abstract,

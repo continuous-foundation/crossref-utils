@@ -59,6 +59,7 @@ export type PublicationDate =
 export type Paper = {
   contributors?: Element; // Already a 'contributors' element
   title?: string;
+  subtitle?: string;
   abstract?: Element;
   doi_data?: DoiData;
   citations?: Record<string, string>; // For now, this is { key: doi }
