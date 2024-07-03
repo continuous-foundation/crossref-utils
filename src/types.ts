@@ -95,3 +95,21 @@ export type ConferenceOptions = {
   doi_data: DoiData;
   conference_papers?: Element[];
 };
+
+export type JournalMetadata = {
+  title: string;
+  abbrevTitle?: string;
+  doi_data: DoiData;
+};
+
+export type JournalIssue = {
+  contributors?: Element; // Already a 'contributors' element
+  title?: string;
+  subtitle?: string;
+  doi_data?: DoiData;
+  publication_dates?: PublicationDate[];
+  issue?: string;
+  volume?: string;
+};
+
+export type JournalArticle = ConferencePaper & {};

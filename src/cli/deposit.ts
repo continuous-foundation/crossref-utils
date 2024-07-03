@@ -12,13 +12,14 @@ import { VFile } from 'vfile';
 import { u } from 'unist-builder';
 import type { Element } from 'xast';
 import { DoiBatch } from '../batch.js';
+import { journalXml } from '../journal.js';
 import { preprintFromMyst } from '../preprint.js';
 import { element2JatsUnist, transformXrefToLink } from './utils.js';
 
 export async function deposit(
   session: ISession,
   opts: {
-    type?: 'conference' | 'preprint';
+    type?: 'conference' | 'journal' | 'preprint';
     file?: string;
     id?: string;
     name?: string;
@@ -36,13 +37,14 @@ export async function deposit(
         message: 'Deposit type:',
         choices: [
           { name: 'Posted Content / Preprint', value: 'preprint' },
+          { name: 'Journal', value: 'journal' },
           { name: 'Conference Proceeding', value: 'conference' },
         ],
       },
     ]);
     depositType = resp.depositType;
   }
-  if (depositType !== 'preprint') {
+  if (depositType === 'conference') {
     throw new Error('Conference Proceeding not yet implemented');
   }
   if (!name) {
@@ -75,6 +77,33 @@ export async function deposit(
       },
     ]);
     registrant = resp.registrant;
+  }
+  if (depositType === 'journal') {
+    session.log.warn('Creating dummy journal xml...');
+    const batch = new DoiBatch(
+      { id: opts.id ?? uuid(), depositor: { name, email }, registrant },
+      journalXml(
+        {
+          title: 'My Journal',
+          abbrevTitle: 'MJ',
+          doi_data: {
+            doi: '10.00000/abc123',
+            resource: 'https://doi.curvenote.com/10.00000/abc123',
+          },
+        },
+        {
+          publication_dates: [new Date('2024 jan 31')],
+          issue: '5',
+          volume: '10',
+        },
+      ),
+    );
+    if (opts.output) {
+      fs.writeFileSync(opts.output, batch.toXml());
+    } else {
+      console.log(batch.toXml());
+    }
+    return;
   }
   await session.reload();
   const projectPath = selectors.selectCurrentProjectPath(session.store.getState());
@@ -165,7 +194,7 @@ function makeDepositCLI(program: Command) {
     .addOption(new Option('--file <value>', 'File to deposit'))
     .addOption(
       new Option('--type <value>', 'Deposit type')
-        .choices(['conference', 'preprint'])
+        .choices(['conference', 'journal', 'preprint'])
         .default('preprint'),
     )
     .addOption(new Option('--id <value>', 'Deposit batch id'))
