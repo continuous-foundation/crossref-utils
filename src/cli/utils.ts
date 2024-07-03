@@ -1,6 +1,6 @@
 import { u } from 'unist-builder';
 import { selectAll } from 'unist-util-select';
-import { GenericNode, GenericParent } from 'myst-common';
+import type { GenericNode, GenericParent } from 'myst-common';
 
 type JatsAttributes = Record<string, string | undefined>;
 

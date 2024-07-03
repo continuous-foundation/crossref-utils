@@ -1,6 +1,6 @@
 import type { Element } from 'xast';
 import { e } from './utils.js';
-import type { ConferenceOptions, ConferencePaper, Preprint, PublicationDate } from './types.js';
+import type { Preprint } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
 import { normalize } from 'doi-utils';
 import { contributorsXmlFromMyst } from './contributors.js';
