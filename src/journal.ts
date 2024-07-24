@@ -2,6 +2,10 @@ import type { Element } from 'xast';
 import { e, t } from './utils.js';
 import type { JournalArticle, JournalIssue, JournalMetadata } from './types.js';
 import { publicationDateXml } from './dates.js';
+import type { ProjectFrontmatter } from 'myst-frontmatter';
+import { contributorsXmlFromMyst } from './contributors.js';
+import { normalize } from 'doi-utils';
+import { fundrefFromMyst } from './funding.js';
 
 /**
  * Create journal_metadata xml
@@ -255,10 +259,36 @@ export function journalXml(
   return e('journal', children);
 }
 
-// export function journalFromMyst(
-//   myst: PageFrontmatter,
-//   citations?: Record<string, string>,
-//   abstract?: Element,
-// ) {
-//   ...
-// }
+export function journalArticleFromMyst(
+  myst: ProjectFrontmatter,
+  citations?: Record<string, string>,
+  abstract?: Element,
+) {
+  const { title, subtitle, license, doi, date } = myst;
+  const contributors = contributorsXmlFromMyst(myst);
+  const articleOpts: JournalArticle = {
+    contributors,
+    title,
+    subtitle,
+    publication_dates: typeof date === 'string' ? [new Date(date)] : undefined,
+    license: license?.content?.url,
+    abstract,
+    funding: fundrefFromMyst(myst),
+    // pages?
+  };
+  if (license && license.content?.CC) {
+    // Only put in CC licenses at this time
+    articleOpts.license = license.content.url;
+  }
+  const normalizedDoi = normalize(doi);
+  if (normalizedDoi) {
+    articleOpts.doi_data = {
+      doi: normalizedDoi,
+      resource: `https://doi.curvenote.com/${normalizedDoi}`,
+    };
+  }
+  if (citations && Object.keys(citations).length) {
+    articleOpts.citations = citations;
+  }
+  return journalArticleXml(articleOpts);
+}

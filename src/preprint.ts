@@ -1,7 +1,7 @@
 import type { Element } from 'xast';
 import { e } from './utils.js';
 import type { Preprint } from './types.js';
-import type { PageFrontmatter } from 'myst-frontmatter';
+import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { normalize } from 'doi-utils';
 import { contributorsXmlFromMyst } from './contributors.js';
 import { dateXml } from './dates.js';
@@ -85,7 +85,7 @@ export function preprintXml({
 }
 
 export function preprintFromMyst(
-  myst: PageFrontmatter,
+  myst: ProjectFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
 ) {
