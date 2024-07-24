@@ -118,4 +118,4 @@ export type JournalIssue = {
   volume?: string;
 };
 
-export type JournalArticle = ConferencePaper & {};
+export type JournalArticle = ConferencePaper;
