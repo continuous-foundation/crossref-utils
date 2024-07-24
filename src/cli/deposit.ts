@@ -96,6 +96,27 @@ export async function deposit(
           issue: '5',
           volume: '10',
         },
+        [
+          {
+            title: 'My title',
+            doi_data: {
+              doi: '10.00000/xyz123',
+              resource: 'https://doi.curvenote.com/10.00000/xyz123',
+            },
+            publication_dates: [new Date('2024 jan 31')],
+            funding: [
+              {
+                sources: [
+                  {
+                    name: 'The funding foundation',
+                    identifiers: ['https://doi.org/10.00000/jkl789'],
+                  },
+                ],
+                awardNumbers: ['my-award-001'],
+              },
+            ],
+          },
+        ],
       ),
     );
     if (opts.output) {

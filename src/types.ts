@@ -56,6 +56,11 @@ export type PublicationDate =
       year: string | number;
     };
 
+export type Fundref = {
+  sources: { name: string; identifiers: string[] }[];
+  awardNumbers: string[];
+};
+
 export type Paper = {
   contributors?: Element; // Already a 'contributors' element
   title?: string;
@@ -63,6 +68,7 @@ export type Paper = {
   abstract?: Element;
   doi_data?: DoiData;
   citations?: Record<string, string>; // For now, this is { key: doi }
+  funding?: Fundref[];
   license?: string; // License URL
 };
 
