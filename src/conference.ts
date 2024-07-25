@@ -25,8 +25,8 @@ export function conferencePaperXml({
   license,
   publication_dates,
 }: ConferencePaper) {
-  if (!title) throw new Error('Missing required field: title');
-  if (!doi_data?.doi) throw new Error('Missing required field: doi');
+  if (!title) throw new Error('Missing required frontmatter field: title');
+  if (!doi_data?.doi) throw new Error('Missing required frontmatter field: doi');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
   const titles = [e('title', title)];

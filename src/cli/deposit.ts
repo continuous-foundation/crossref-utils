@@ -3,18 +3,28 @@ import fs from 'node:fs';
 import { Command, Option } from 'commander';
 import inquirer from 'inquirer';
 import { v4 as uuid } from 'uuid';
-import { Session, filterPages, getFileContent, processProject, selectors } from 'myst-cli';
+import {
+  Session,
+  filterPages,
+  getFileContent,
+  loadProject,
+  parseMyst,
+  processProject,
+  selectors,
+} from 'myst-cli';
 import type { ISession } from 'myst-cli';
 import { clirun } from 'myst-cli-utils';
+import type { GenericParent } from 'myst-common';
 import { extractPart } from 'myst-common';
 import { JatsSerializer } from 'myst-to-jats';
 import { VFile } from 'vfile';
 import { u } from 'unist-builder';
 import type { Element } from 'xast';
 import { DoiBatch } from '../batch.js';
-import { journalXml } from '../journal.js';
+import { journalArticleFromMyst, journalXml } from '../journal.js';
 import { preprintFromMyst } from '../preprint.js';
 import { element2JatsUnist, transformXrefToLink } from './utils.js';
+import type { ProjectFrontmatter } from 'myst-frontmatter';
 
 export async function deposit(
   session: ISession,
@@ -26,9 +36,12 @@ export async function deposit(
     email?: string;
     registrant?: string;
     output?: string;
+    journalTitle?: string;
+    journalAbbr?: string;
+    journalDoi?: string;
   },
 ) {
-  let { type: depositType, name, email, registrant } = opts;
+  let { type: depositType, name, email, registrant, journalTitle, journalAbbr, journalDoi } = opts;
   if (!depositType) {
     const resp = await inquirer.prompt([
       {
@@ -46,6 +59,9 @@ export async function deposit(
   }
   if (depositType === 'conference') {
     throw new Error('Conference Proceeding not yet implemented');
+  }
+  if (depositType !== 'journal' && (journalTitle || journalAbbr || journalDoi)) {
+    throw new Error('journal title/abbreviation/doi are only used for deposit type "journal"');
   }
   if (!name) {
     const resp = await inquirer.prompt([
@@ -78,57 +94,11 @@ export async function deposit(
     ]);
     registrant = resp.registrant;
   }
-  if (depositType === 'journal') {
-    session.log.warn('Creating dummy journal xml...');
-    const batch = new DoiBatch(
-      { id: opts.id ?? uuid(), depositor: { name, email }, registrant },
-      journalXml(
-        {
-          title: 'My Journal',
-          abbrevTitle: 'MJ',
-          doi_data: {
-            doi: '10.00000/abc123',
-            resource: 'https://doi.curvenote.com/10.00000/abc123',
-          },
-        },
-        {
-          publication_dates: [new Date('2024 jan 31')],
-          issue: '5',
-          volume: '10',
-        },
-        [
-          {
-            title: 'My title',
-            doi_data: {
-              doi: '10.00000/xyz123',
-              resource: 'https://doi.curvenote.com/10.00000/xyz123',
-            },
-            publication_dates: [new Date('2024 jan 31')],
-            funding: [
-              {
-                sources: [
-                  {
-                    name: 'The funding foundation',
-                    identifiers: ['https://doi.org/10.00000/jkl789'],
-                  },
-                ],
-                awardNumbers: ['my-award-001'],
-              },
-            ],
-          },
-        ],
-      ),
-    );
-    if (opts.output) {
-      fs.writeFileSync(opts.output, batch.toXml());
-    } else {
-      console.log(batch.toXml());
-    }
-    return;
-  }
   await session.reload();
-  const projectPath = selectors.selectCurrentProjectPath(session.store.getState());
-  if (!projectPath) {
+  const state = session.store.getState();
+  const projectPath = selectors.selectCurrentProjectPath(state);
+  const configFile = selectors.selectCurrentProjectFile(state);
+  if (!projectPath || !configFile) {
     throw new Error('No MyST project found');
   }
   let depositFile: string;
@@ -145,29 +115,69 @@ export async function deposit(
     );
     const pages = filterPages(project);
     if (pages.length === 0) throw new Error('No MyST pages found');
-    if (pages.length === 1) {
-      depositFile = pages[0].file;
-    } else {
-      const resp = await inquirer.prompt([
-        {
-          name: 'depositFile',
-          type: 'list',
-          message: 'File:',
-          choices: filterPages(project).map(({ file }) => {
-            return { name: path.relative('.', file), value: file };
-          }),
-        },
-      ]);
-      depositFile = resp.depositFile;
-    }
+    const resp = await inquirer.prompt([
+      {
+        name: 'depositFile',
+        type: 'list',
+        message: 'File:',
+        choices: [{ file: configFile }, ...filterPages(project)].map(({ file }) => {
+          return { name: path.relative('.', file), value: file };
+        }),
+      },
+    ]);
+    depositFile = resp.depositFile;
   }
-  const [{ mdast, references, frontmatter }] = await getFileContent(session, [depositFile], {
+  const projectFrontmatter = selectors.selectLocalProjectConfig(
+    session.store.getState(),
     projectPath,
-    imageExtensions: [],
-  });
+  );
+  let abstractPart: GenericParent | undefined;
+  let frontmatter: ProjectFrontmatter | undefined;
+  const dois: Record<string, string> = {};
+  if (depositFile === configFile) {
+    const { pages } = await loadProject(session, projectPath);
+    const fileContents = await getFileContent(
+      session,
+      pages.map(({ file }) => file),
+      { projectPath, imageExtensions: [] },
+    );
+    if (projectFrontmatter?.parts?.abstract) {
+      abstractPart = parseMyst(session, projectFrontmatter.parts.abstract.join('\n\n'), configFile);
+    } else {
+      fileContents.forEach(({ mdast }) => {
+        if (abstractPart) return;
+        abstractPart = extractPart(mdast, 'abstract');
+      });
+    }
+    fileContents.forEach(({ references }) => {
+      references.cite?.order.forEach((key) => {
+        const value = references.cite?.data[key].doi;
+        if (value) dois[key] = value;
+        else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
+      });
+    });
+    frontmatter = projectFrontmatter;
+  } else {
+    const [fileContent] = await getFileContent(session, [depositFile], {
+      projectPath,
+      imageExtensions: [],
+    });
+    // Prioritize project title over page title
+    const title = projectFrontmatter?.title ?? frontmatter?.title;
+    // Prioritize project subtitle over page subtitle unless project has no title
+    const subtitle = projectFrontmatter?.title
+      ? projectFrontmatter?.subtitle ?? undefined
+      : frontmatter?.subtitle;
+    frontmatter = { ...fileContent.frontmatter, title, subtitle };
+    abstractPart = extractPart(fileContent.mdast, 'abstract');
+    fileContent.references.cite?.order.forEach((key) => {
+      const value = fileContent.references.cite?.data[key].doi;
+      if (value) dois[key] = value;
+      else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
+    });
+  }
 
   let abstract: Element | undefined;
-  const abstractPart = extractPart(mdast, 'abstract');
   if (abstractPart) {
     transformXrefToLink(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
@@ -179,25 +189,54 @@ export async function deposit(
     ) as Element;
   }
 
-  const dois: Record<string, string> = {};
-  references.cite?.order.forEach((key) => {
-    const value = references.cite?.data[key].doi;
-    if (value) dois[key] = value;
-    else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
-  });
-
-  const projectFrontmatter = selectors.selectLocalProjectConfig(
-    session.store.getState(),
-    projectPath,
-  );
-  // Prioritize project title over page title
-  const title = projectFrontmatter?.title ?? frontmatter.title;
-  // Prioritize project subtitle over page subtitle unless project has no title
-  const subtitle = projectFrontmatter?.title
-    ? projectFrontmatter?.subtitle ?? undefined
-    : frontmatter.subtitle;
-  const body = preprintFromMyst({ ...frontmatter, title, subtitle }, dois, abstract);
-
+  let body: Element;
+  if (depositType === 'journal') {
+    if (!journalTitle) {
+      const resp = await inquirer.prompt([
+        {
+          name: 'journalTitle',
+          type: 'string',
+          message: 'Journal Title:',
+        },
+      ]);
+      journalTitle = resp.journalTitle;
+    }
+    if (journalAbbr == null) {
+      const resp = await inquirer.prompt([
+        {
+          name: 'journalAbbr',
+          type: 'string',
+          message: 'Journal Abbreviation:',
+        },
+      ]);
+      journalAbbr = resp.journalAbbr;
+    }
+    if (!journalDoi) {
+      const resp = await inquirer.prompt([
+        {
+          name: 'journalDoi',
+          type: 'string',
+          message: 'Journal DOI:',
+        },
+      ]);
+      journalDoi = resp.journalDoi;
+    }
+    if (!journalTitle || !journalDoi) throw new Error('Journal title and DOI are required');
+    body = journalXml(
+      {
+        title: journalTitle,
+        abbrevTitle: journalAbbr,
+        doi_data: {
+          doi: journalDoi,
+          resource: `https://doi.curvenote.com/${journalDoi}`,
+        },
+      },
+      undefined,
+      [journalArticleFromMyst(frontmatter ?? {}, dois, abstract)],
+    );
+  } else {
+    body = preprintFromMyst(frontmatter ?? {}, dois, abstract);
+  }
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },
     body,
@@ -223,6 +262,11 @@ function makeDepositCLI(program: Command) {
     .addOption(new Option('--email <value>', 'Depositor email').default('doi@curvenote.com'))
     .addOption(new Option('--registrant <value>', 'Registrant organization').default('Crossref'))
     .addOption(new Option('-o, --output <value>', 'Output file'))
+    .addOption(new Option('--journal-title <value>', 'Journal title for journal deposits'))
+    .addOption(
+      new Option('--journal-abbr <value>', 'Journal title abbreviation for journal deposits'),
+    )
+    .addOption(new Option('--journal-doi <value>', 'Journal DOI for journal deposits'))
     .action(clirun(deposit, { program, getSession: (logger) => new Session({ logger }) }));
   return command;
 }

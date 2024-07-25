@@ -15,7 +15,7 @@ import { fundrefFromMyst } from './funding.js';
  * Missing fields: issn, coden, archive_locations
  */
 export function journalMetadataXml({ title, abbrevTitle, doi_data }: JournalMetadata) {
-  if (!title) throw new Error('Missing required field: title');
+  if (!title) throw new Error('Missing required frontmatter field: title');
   const children: Element[] = [e('full_title', title)];
   if (abbrevTitle) children.push(e('abbrev_title', abbrevTitle));
   // issn
@@ -72,7 +72,7 @@ export function journalIssueXml({
   doi_data,
   publication_dates,
 }: JournalIssue) {
-  if (!publication_dates?.length) throw new Error('Missing required field: publication_date');
+  if (!publication_dates?.length) throw new Error('Missing required frontmatter field: date');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
   const titles = [e('title', title)];
@@ -148,9 +148,9 @@ export function journalArticleXml({
   license,
   publication_dates,
 }: JournalArticle) {
-  if (!title) throw new Error('Missing required field: title');
-  if (!doi_data?.doi) throw new Error('Missing required field: doi');
-  if (!publication_dates?.length) throw new Error('Missing required field: publication_date');
+  if (!title) throw new Error('Missing required frontmatter field: title');
+  if (!doi_data?.doi) throw new Error('Missing required frontmatter field: doi');
+  if (!publication_dates?.length) throw new Error('Missing required frontmatter field: date');
   const children: Element[] = [];
   const titles = [e('title', title)];
   if (subtitle) titles.push(e('subtitle', subtitle));
@@ -263,7 +263,7 @@ export function journalArticleFromMyst(
   myst: ProjectFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
-) {
+): JournalArticle {
   const { title, subtitle, license, doi, date } = myst;
   const contributors = contributorsXmlFromMyst(myst);
   const articleOpts: JournalArticle = {
@@ -290,5 +290,5 @@ export function journalArticleFromMyst(
   if (citations && Object.keys(citations).length) {
     articleOpts.citations = citations;
   }
-  return journalArticleXml(articleOpts);
+  return articleOpts;
 }

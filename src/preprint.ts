@@ -24,10 +24,10 @@ export function preprintXml({
   license,
   date,
 }: Preprint) {
-  if (!title) throw new Error('Missing required field: title');
+  if (!title) throw new Error('Missing required frontmatter field: title');
   const posted_date = dateXml('posted_date', date);
-  if (!posted_date) throw new Error('Missing required field: date');
-  if (!doi_data?.doi) throw new Error('Missing required field: doi');
+  if (!posted_date) throw new Error('Missing required frontmatter field: date');
+  if (!doi_data?.doi) throw new Error('Missing required frontmatter field: doi');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
   const titles = [e('title', title)];
