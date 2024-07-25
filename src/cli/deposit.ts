@@ -232,7 +232,7 @@ export async function deposit(
         },
       },
       undefined,
-      [journalArticleFromMyst(frontmatter ?? {}, dois, abstract)],
+      [journalArticleFromMyst(session, frontmatter ?? {}, dois, abstract)],
     );
   } else {
     body = preprintFromMyst(frontmatter ?? {}, dois, abstract);

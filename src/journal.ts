@@ -6,6 +6,7 @@ import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { contributorsXmlFromMyst } from './contributors.js';
 import { normalize } from 'doi-utils';
 import { fundrefFromMyst } from './funding.js';
+import type { ISession } from 'myst-cli-utils';
 
 /**
  * Create journal_metadata xml
@@ -236,7 +237,7 @@ export function journalArticleXml({
       e(
         'citation_list',
         Object.entries(citations).map(([key, value]) => {
-          return e('citation', { key }, [e('doi', value)]);
+          return e('citation', { key }, [e('doi', normalize(value))]);
         }),
       ),
     );
@@ -260,6 +261,7 @@ export function journalXml(
 }
 
 export function journalArticleFromMyst(
+  session: ISession,
   myst: ProjectFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
@@ -273,7 +275,7 @@ export function journalArticleFromMyst(
     publication_dates: typeof date === 'string' ? [new Date(date)] : undefined,
     license: license?.content?.url,
     abstract,
-    funding: fundrefFromMyst(myst),
+    funding: fundrefFromMyst(session, myst),
     // pages?
   };
   if (license && license.content?.CC) {
