@@ -4,7 +4,7 @@ import { validateAgainstXsdWrapper } from '../validate.js';
 
 function makeValidateCLI(program: Command) {
   const command = new Command('validate')
-    .description('Validate XML against crossref4.4.2')
+    .description('Validate XML against crossref xsd schema')
     .argument('<path>', 'A path to local XML file')
     .action(clirun(validateAgainstXsdWrapper, { program, getSession }));
   return command;

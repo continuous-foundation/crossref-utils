@@ -7,11 +7,27 @@ import { makeExecutable, writeFileToFolder } from 'myst-cli-utils';
 import chalk from 'chalk';
 import AdmZip from 'adm-zip';
 
+const DEFAULT_XSD_VERSION = '5.3.1';
+
+function xsdVersionFromXml(session: ISession, file: string) {
+  let version: string | undefined;
+  if (fs.existsSync(file)) {
+    const text = fs.readFileSync(file).toString();
+    const matches = new RegExp(
+      /xmlns="http:\/\/www\.crossref\.org\/schema\/(?<version>[0-9]+\.[0-9]+\.[0-9]+)"/g,
+    ).exec(text);
+    version = matches?.groups?.version;
+  }
+  if (version) return version;
+  session.log.warn('Unable to determine crossref schema version from file');
+  return DEFAULT_XSD_VERSION;
+}
+
 /**
  * Download and unzip xsd from crossref gitlab
  */
-async function ensureXsdExists(session: ISession) {
-  if (fs.existsSync(localXsdFile())) return;
+async function ensureXsdExists(session: ISession, version: string) {
+  if (fs.existsSync(localXsdFile(version))) return;
   if (!fs.existsSync(xsdFolder())) {
     fs.mkdirSync(xsdFolder(), { recursive: true });
   }
@@ -26,7 +42,7 @@ async function ensureXsdExists(session: ISession) {
   session.log.info(`🤐 Unzipping template: ${zipFile}`);
   const zip = new AdmZip(zipFile);
   zip.extractAllTo(extractFolder());
-  if (!fs.existsSync(localXsdFile())) {
+  if (!fs.existsSync(localXsdFile(version))) {
     throw new Error(
       `Downloading and unzipping XSD failed.\nURL: ${url}\nDestination: ${xsdFolder()}`,
     );
@@ -41,12 +57,12 @@ function xsdFolder() {
   return path.join(extractFolder(), 'schema-master-schemas', 'schemas');
 }
 
-function xsdFile() {
-  return 'crossref4.4.2.xsd';
+function xsdFile(version: string) {
+  return `crossref${version}.xsd`;
 }
 
-function localXsdFile() {
-  return path.join(xsdFolder(), xsdFile());
+function localXsdFile(version: string) {
+  return path.join(xsdFolder(), xsdFile(version));
 }
 
 /**
@@ -59,7 +75,7 @@ export function isXmllintAvailable() {
 /**
  * Create a logger that hides known error messages
  */
-export function createXmllintLogger(session: ISession): LoggerDE {
+export function createXmllintLogger(session: Pick<ISession, 'log'>): LoggerDE {
   const logger = {
     debug(data: string) {
       const line = data.trim();
@@ -112,10 +128,12 @@ export async function xmllintValidate(session: Pick<ISession, 'log'>, file: stri
  * Returns true if valid and false if invalid.
  */
 export async function validateAgainstXsd(session: ISession, file: string) {
-  await ensureXsdExists(session);
-  session.log.debug(`Validating against: ${localXsdFile()}`);
-  session.log.info(`🧐 Validating against: ${xsdFile()}`);
-  const valid = await xmllintValidate(session, file, localXsdFile());
+  if (!fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  const version = xsdVersionFromXml(session, file);
+  await ensureXsdExists(session, version);
+  session.log.debug(`Validating against: ${localXsdFile(version)}`);
+  session.log.info(`🧐 Validating against: ${xsdFile(version)}`);
+  const valid = await xmllintValidate(session, file, localXsdFile(version));
   return valid;
 }
 

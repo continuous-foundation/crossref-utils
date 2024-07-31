@@ -18,6 +18,12 @@ export type ContributorOptions = {
     id: string;
     name: string;
     institution?: string;
+    ror?: string;
+    isni?: string;
+    department?: string;
+    city?: string;
+    state?: string;
+    country?: string;
   }[];
   sequence: 'first' | 'additional';
   contributor_role:
@@ -50,18 +56,32 @@ export type PublicationDate =
       year: string | number;
     };
 
-export type ConferencePaper = {
+export type Fundref = {
+  sources: { name: string; identifiers: string[] }[];
+  awardNumbers: string[];
+};
+
+export type Paper = {
   contributors?: Element; // Already a 'contributors' element
   title?: string;
+  subtitle?: string;
   abstract?: Element;
   doi_data?: DoiData;
   citations?: Record<string, string>; // For now, this is { key: doi }
+  funding?: Fundref[];
+  license?: string; // License URL
+};
+
+export type Preprint = Paper & {
+  date?: PublicationDate;
+};
+
+export type ConferencePaper = Paper & {
   pages?: {
     first_page: string;
     last_page?: string;
     other_pages?: string;
   };
-  license?: string; // License URL
   publication_dates?: PublicationDate[];
 };
 
@@ -81,3 +101,21 @@ export type ConferenceOptions = {
   doi_data: DoiData;
   conference_papers?: Element[];
 };
+
+export type JournalMetadata = {
+  title: string;
+  abbrevTitle?: string;
+  doi_data: DoiData;
+};
+
+export type JournalIssue = {
+  contributors?: Element; // Already a 'contributors' element
+  title?: string;
+  subtitle?: string;
+  doi_data?: DoiData;
+  publication_dates?: PublicationDate[];
+  issue?: string;
+  volume?: string;
+};
+
+export type JournalArticle = ConferencePaper;
