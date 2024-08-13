@@ -266,8 +266,15 @@ export function journalArticleFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ): JournalArticle {
-  const { title, subtitle, license, doi, date } = myst;
+  const { title, subtitle, license, doi, date, biblio } = myst;
   const contributors = contributorsXmlFromMyst(myst);
+  const { first_page, last_page } = biblio ?? {};
+  const pages = first_page
+    ? {
+        first_page: String(first_page),
+        last_page: last_page ? String(last_page) : undefined,
+      }
+    : undefined;
   const articleOpts: JournalArticle = {
     contributors,
     title,
@@ -276,7 +283,7 @@ export function journalArticleFromMyst(
     license: license?.content?.url,
     abstract,
     funding: fundrefFromMyst(session, myst),
-    // pages?
+    pages,
   };
   if (license && license.content?.CC) {
     // Only put in CC licenses at this time

@@ -6,7 +6,9 @@ import { v4 as uuid } from 'uuid';
 import {
   Session,
   filterPages,
+  findCurrentProjectAndLoad,
   getFileContent,
+  loadConfig,
   loadProject,
   parseMyst,
   processProject,
@@ -15,7 +17,7 @@ import {
 import type { ISession } from 'myst-cli';
 import { clirun } from 'myst-cli-utils';
 import type { GenericParent } from 'myst-common';
-import { extractPart } from 'myst-common';
+import { extractPart, plural } from 'myst-common';
 import { JatsSerializer } from 'myst-to-jats';
 import { VFile } from 'vfile';
 import { u } from 'unist-builder';
@@ -23,110 +25,37 @@ import type { Element } from 'xast';
 import { DoiBatch } from '../batch.js';
 import { journalArticleFromMyst, journalXml } from '../journal.js';
 import { preprintFromMyst } from '../preprint.js';
-import { element2JatsUnist, transformXrefToLink } from './utils.js';
+import { addDoiToConfig, element2JatsUnist, transformXrefToLink } from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
+import { selectNewDois } from './generate.js';
+import type { JournalIssue } from '../types.js';
+import { curvenoteDoiData } from '../utils.js';
 
-export async function deposit(
-  session: ISession,
-  opts: {
-    type?: 'conference' | 'journal' | 'preprint';
-    file?: string;
-    id?: string;
-    name?: string;
-    email?: string;
-    registrant?: string;
-    output?: string;
-    journalTitle?: string;
-    journalAbbr?: string;
-    journalDoi?: string;
-  },
-) {
-  let { type: depositType, name, email, registrant, journalTitle, journalAbbr, journalDoi } = opts;
-  if (!depositType) {
-    const resp = await inquirer.prompt([
-      {
-        name: 'depositType',
-        type: 'list',
-        message: 'Deposit type:',
-        choices: [
-          { name: 'Posted Content / Preprint', value: 'preprint' },
-          { name: 'Journal', value: 'journal' },
-          { name: 'Conference Proceeding', value: 'conference' },
-        ],
-      },
-    ]);
-    depositType = resp.depositType;
-  }
-  if (depositType === 'conference') {
-    throw new Error('Conference Proceeding not yet implemented');
-  }
-  if (depositType !== 'journal' && (journalTitle || journalAbbr || journalDoi)) {
-    throw new Error('journal title/abbreviation/doi are only used for deposit type "journal"');
-  }
-  if (!name) {
-    const resp = await inquirer.prompt([
-      {
-        name: 'name',
-        type: 'string',
-        message: 'Depositor name:',
-      },
-    ]);
-    name = resp.name;
-  }
-  if (!email) {
-    const resp = await inquirer.prompt([
-      {
-        name: 'email',
-        type: 'string',
-        message: 'Depositor email:',
-      },
-    ]);
-    email = resp.email;
-  }
-  if (!name || !email) throw new Error('Depositor name/email not provided');
-  if (!registrant) {
-    const resp = await inquirer.prompt([
-      {
-        name: 'registrant',
-        type: 'string',
-        message: 'Registrant:',
-      },
-    ]);
-    registrant = resp.registrant;
-  }
-  await session.reload();
+type DepositType = 'conference' | 'journal' | 'preprint';
+
+type DepositOptions = {
+  type?: DepositType;
+  file?: string;
+  id?: string;
+  name?: string;
+  email?: string;
+  registrant?: string;
+  output?: string;
+  journalTitle?: string;
+  journalAbbr?: string;
+  journalDoi?: string;
+  prefix?: string;
+};
+
+type DepositSource = {
+  projectPath: string;
+  depositFile: string;
+};
+
+export async function depositArticleFromSource(session: ISession, depositSource: DepositSource) {
+  const { projectPath, depositFile } = depositSource;
   const state = session.store.getState();
-  const projectPath = selectors.selectCurrentProjectPath(state);
-  const configFile = selectors.selectCurrentProjectFile(state);
-  if (!projectPath || !configFile) {
-    throw new Error('No MyST project found');
-  }
-  let depositFile: string;
-  if (opts.file) {
-    depositFile = path.resolve(opts.file);
-  } else {
-    const project = await processProject(
-      session,
-      { path: projectPath },
-      {
-        imageExtensions: [],
-        writeFiles: false,
-      },
-    );
-    const pages = filterPages(project);
-    if (pages.length === 0) throw new Error('No MyST pages found');
-    const resp = await inquirer.prompt([
-      {
-        name: 'depositFile',
-        type: 'list',
-        message: 'File:',
-        choices: [{ file: configFile }, ...filterPages(project)].map(({ file }) => {
-          return { name: path.relative('.', file), value: file };
-        }),
-      },
-    ]);
-    depositFile = resp.depositFile;
-  }
+  const configFile = selectors.selectLocalConfigFile(state, projectPath);
   const projectFrontmatter = selectors.selectLocalProjectConfig(
     session.store.getState(),
     projectPath,
@@ -188,54 +117,267 @@ export async function deposit(
       jats.map((e) => element2JatsUnist(e)),
     ) as Element;
   }
+  return { frontmatter: frontmatter ?? {}, dois, abstract, configFile };
+}
+
+async function getDepositSources(
+  session: ISession,
+  opts: DepositOptions,
+): Promise<DepositSource[]> {
+  let depositFile: string;
+  let projectPath: string | undefined;
+  // If file is specified, find the containing project and use it as the only source
+  if (opts.file) {
+    depositFile = path.resolve(opts.file);
+    projectPath = await findCurrentProjectAndLoad(session, depositFile);
+    if (!projectPath) {
+      throw new Error(`Unable to determine project path from file: ${opts.file}`);
+    }
+    return [{ depositFile, projectPath }];
+  }
+  // If file is not specified and there is a project on the current path, select a single source from there
+  await session.reload();
+  const state = session.store.getState();
+  projectPath = selectors.selectCurrentProjectPath(state);
+  const configFile = selectors.selectCurrentProjectFile(state);
+  if (projectPath && configFile) {
+    const project = await processProject(
+      session,
+      { path: projectPath },
+      {
+        imageExtensions: [],
+        writeFiles: false,
+      },
+    );
+    const pages = filterPages(project);
+    if (pages.length === 0) throw new Error('No MyST pages found');
+    const resp = await inquirer.prompt([
+      {
+        name: 'depositFile',
+        type: 'list',
+        message: 'File:',
+        choices: [{ file: configFile }, ...filterPages(project)].map(({ file }) => {
+          return { name: path.relative('.', file), value: file };
+        }),
+      },
+    ]);
+    depositFile = resp.depositFile;
+    return [{ projectPath, depositFile }];
+  }
+  // If there is no project on the current path, load all projects in child folders
+  const subdirs = fs
+    .readdirSync('.')
+    .map((item) => path.resolve(item))
+    .filter((item) => fs.lstatSync(item).isDirectory());
+  const depositSources = (
+    await Promise.all(
+      subdirs.map(async (dir) => {
+        const config = await loadConfig(session, dir);
+        if (!config) return;
+        return {
+          projectPath: dir,
+          depositFile: selectors.selectLocalConfigFile(session.store.getState(), dir),
+        };
+      }),
+    )
+  ).filter((source): source is DepositSource => !!source);
+  return depositSources;
+}
+
+function issueDataFromArticles(
+  session: ISession,
+  articles: { frontmatter: ProjectFrontmatter }[],
+  opts: DepositOptions,
+) {
+  let { journalTitle, journalAbbr, journalDoi } = opts;
+  let volume: string | undefined;
+  let issue: string | undefined;
+  let issueDoi: string | undefined;
+  let publicationDate: Date | false | undefined;
+  articles.forEach(({ frontmatter }) => {
+    const { biblio, date, venue } = frontmatter;
+    if (venue?.title) {
+      if (!journalTitle) {
+        journalTitle = venue.title;
+      } else if (journalTitle !== venue.title) {
+        throw new Error(`Conflicting journal titles: "${journalTitle}" and "${venue.title}"`);
+      }
+    }
+    if (venue?.short_title) {
+      if (!journalAbbr) {
+        journalAbbr = venue.short_title;
+      } else if (journalAbbr !== venue.short_title) {
+        throw new Error(
+          `Conflicting journal abbreviations: "${journalAbbr}" and "${venue.short_title}"`,
+        );
+      }
+    }
+    if (venue?.doi) {
+      if (!journalDoi) {
+        journalDoi = venue.doi;
+      } else if (journalDoi !== venue.doi) {
+        throw new Error(`Conflicting journal dois: "${journalDoi}" and "${venue.doi}"`);
+      }
+    }
+    if (biblio?.volume) {
+      if (!volume) {
+        volume = String(biblio.volume);
+      } else if (volume !== String(biblio.volume)) {
+        throw new Error(`Conflicting volumes: "${volume}" and "${biblio.volume}"`);
+      }
+    }
+    if (biblio?.issue) {
+      if (!issue) {
+        issue = String(biblio.issue);
+      } else if (issue !== String(biblio.issue)) {
+        throw new Error(`Conflicting issues: "${issue}" and "${biblio.issue}"`);
+      }
+    }
+    if (biblio?.doi) {
+      if (!issueDoi) {
+        issueDoi = biblio.doi;
+      } else if (issueDoi !== biblio.doi) {
+        throw new Error(`Conflicting issue dois: "${issueDoi}" and "${biblio.doi}"`);
+      }
+    }
+    if (date) {
+      const articleDate = new Date(date);
+      if (publicationDate == null) {
+        publicationDate = articleDate;
+      } else if (publicationDate && publicationDate.getTime() !== articleDate.getTime()) {
+        publicationDate = false;
+      }
+    }
+  });
+  if (!publicationDate && (volume || issue || issueDoi)) {
+    throw new Error(
+      'if volume/issue/issueDoi are provided, all articles must have the same publication date',
+    );
+  }
+  return { journalTitle, journalDoi, journalAbbr, volume, issue, issueDoi, publicationDate };
+}
+
+export async function deposit(session: ISession, opts: DepositOptions) {
+  let { type: depositType, name, email, registrant, prefix } = opts;
+  if (!depositType) {
+    const resp = await inquirer.prompt([
+      {
+        name: 'depositType',
+        type: 'list',
+        message: 'Deposit type:',
+        choices: [
+          { name: 'Posted Content / Preprint', value: 'preprint' },
+          { name: 'Journal', value: 'journal' },
+          { name: 'Conference Proceeding', value: 'conference' },
+        ],
+      },
+    ]);
+    depositType = resp.depositType;
+  }
+  if (!depositType) {
+    throw new Error('No deposit type specified');
+  }
+  if (depositType === 'conference') {
+    throw new Error('Conference Proceeding not yet implemented 😭');
+  }
+  if (!name) {
+    const resp = await inquirer.prompt([
+      {
+        name: 'name',
+        type: 'string',
+        message: 'Depositor name:',
+      },
+    ]);
+    name = resp.name;
+  }
+  if (!email) {
+    const resp = await inquirer.prompt([
+      {
+        name: 'email',
+        type: 'string',
+        message: 'Depositor email:',
+      },
+    ]);
+    email = resp.email;
+  }
+  if (!name || !email) throw new Error('Depositor name/email not provided');
+  if (!registrant) {
+    const resp = await inquirer.prompt([
+      {
+        name: 'registrant',
+        type: 'string',
+        message: 'Registrant:',
+      },
+    ]);
+    registrant = resp.registrant;
+  }
+  if (!prefix) prefix = 'curvenote';
+  const depositSources = await getDepositSources(session, opts);
+  const depositArticles = await Promise.all(
+    depositSources.map((source) => depositArticleFromSource(session, source)),
+  );
+  if (depositArticles.length === 0) {
+    throw Error('nothing found for deposit');
+  }
+  console.log(`🔍 Found ${plural('%s article(s)', depositArticles)} for ${depositType} deposit`);
+  const { journalTitle, journalAbbr, journalDoi, volume, issue, issueDoi, publicationDate } =
+    issueDataFromArticles(session, depositArticles, opts);
+  const count = depositArticles.filter(({ frontmatter }) => !frontmatter.doi).length;
+  const newDois = await selectNewDois(count, prefix);
+  depositArticles.forEach(({ frontmatter, configFile }) => {
+    if (frontmatter.doi) return;
+    const doi = newDois.shift();
+    frontmatter.doi = doi;
+    if (configFile && doi) {
+      addDoiToConfig(configFile, doi);
+    }
+  });
 
   let body: Element;
   if (depositType === 'journal') {
-    if (!journalTitle) {
-      const resp = await inquirer.prompt([
-        {
-          name: 'journalTitle',
-          type: 'string',
-          message: 'Journal Title:',
-        },
-      ]);
-      journalTitle = resp.journalTitle;
-    }
-    if (journalAbbr == null) {
-      const resp = await inquirer.prompt([
-        {
-          name: 'journalAbbr',
-          type: 'string',
-          message: 'Journal Abbreviation:',
-        },
-      ]);
-      journalAbbr = resp.journalAbbr;
-    }
-    if (!journalDoi) {
-      const resp = await inquirer.prompt([
-        {
-          name: 'journalDoi',
-          type: 'string',
-          message: 'Journal DOI:',
-        },
-      ]);
-      journalDoi = resp.journalDoi;
-    }
     if (!journalTitle || !journalDoi) throw new Error('Journal title and DOI are required');
+    let journalIssue: JournalIssue | undefined;
+    console.log('Deposit summary:');
+    console.log('  Journal:');
+    console.log(`    Title: ${journalTitle}${journalAbbr ? ` (${journalAbbr})` : ''}`);
+    if (journalDoi) console.log(`    Doi: ${journalDoi}`);
+    if (volume || issue || issueDoi) {
+      if (!publicationDate) {
+        throw new Error(`publication date is required for journal issue`);
+      }
+      console.log('  Issue:');
+      console.log(`    Publication Date: ${publicationDate.toDateString()}`);
+      if (volume) console.log(`    Volume: ${volume}`);
+      if (issue) console.log(`    Issue: ${issue}`);
+      if (issueDoi) console.log(`    Doi: ${issueDoi}`);
+      journalIssue = {
+        publication_dates: [publicationDate],
+        volume,
+        issue,
+        doi_data: issueDoi ? curvenoteDoiData(issueDoi) : undefined,
+      };
+    }
+    console.log('  Articles:');
+    depositArticles.forEach(({ frontmatter }) => {
+      console.log(`    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}...`);
+    });
     body = journalXml(
       {
         title: journalTitle,
         abbrevTitle: journalAbbr,
-        doi_data: {
-          doi: journalDoi,
-          resource: `https://doi.curvenote.com/${journalDoi}`,
-        },
+        doi_data: curvenoteDoiData(journalDoi),
       },
-      undefined,
-      [journalArticleFromMyst(session, frontmatter ?? {}, dois, abstract)],
+      journalIssue,
+      depositArticles.map(({ frontmatter, dois, abstract }) => {
+        return journalArticleFromMyst(session, frontmatter, dois, abstract);
+      }),
     );
   } else {
-    body = preprintFromMyst(frontmatter ?? {}, dois, abstract);
+    if (depositArticles.length > 1) {
+      throw new Error('preprint deposit may only use a single article');
+    }
+    const { frontmatter, dois, abstract } = depositArticles[0];
+    body = preprintFromMyst(frontmatter, dois, abstract);
   }
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },
@@ -262,11 +404,7 @@ function makeDepositCLI(program: Command) {
     .addOption(new Option('--email <value>', 'Depositor email').default('doi@curvenote.com'))
     .addOption(new Option('--registrant <value>', 'Registrant organization').default('Crossref'))
     .addOption(new Option('-o, --output <value>', 'Output file'))
-    .addOption(new Option('--journal-title <value>', 'Journal title for journal deposits'))
-    .addOption(
-      new Option('--journal-abbr <value>', 'Journal title abbreviation for journal deposits'),
-    )
-    .addOption(new Option('--journal-doi <value>', 'Journal DOI for journal deposits'))
+    .addOption(new Option('--prefix <value>', 'Prefix for new DOIs'))
     .action(clirun(deposit, { program, getSession: (logger) => new Session({ logger }) }));
   return command;
 }
