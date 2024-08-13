@@ -76,9 +76,12 @@ export function journalIssueXml({
   if (!publication_dates?.length) throw new Error('Missing required frontmatter field: date');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
-  const titles = [e('title', title)];
-  if (subtitle) titles.push(e('subtitle', subtitle));
-  children.push(e('titles', titles));
+  if (title || subtitle) {
+    const titles: Element[] = [];
+    if (title) titles.push(e('title', title));
+    if (subtitle) titles.push(e('subtitle', subtitle));
+    children.push(e('titles', titles));
+  }
   children.push(...publication_dates.map(publicationDateXml).filter((d): d is Element => !!d));
   if (volume) {
     children.push(
