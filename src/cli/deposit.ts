@@ -28,8 +28,10 @@ import { preprintFromMyst } from '../preprint.js';
 import { addDoiToConfig, element2JatsUnist, transformXrefToLink } from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { selectNewDois } from './generate.js';
-import type { JournalIssue } from '../types.js';
+import type { ConferenceOptions, JournalIssue } from '../types.js';
 import { curvenoteDoiData } from '../utils.js';
+import { conferencePaperFromMyst, conferenceXml } from '../conference.js';
+import { contributorsXmlFromMystEditors } from '../contributors.js';
 
 type DepositType = 'conference' | 'journal' | 'preprint';
 
@@ -194,8 +196,17 @@ function issueDataFromArticles(
   let issue: string | undefined;
   let issueDoi: string | undefined;
   let publicationDate: Date | false | undefined;
+  let journalSeries: string | undefined;
+  let journalIssn: string | undefined;
+  let eventNumber: string | number | undefined;
+  let eventDate: string | undefined;
+  let eventLocation: string | undefined;
+  let proceedingsTitle: string | undefined;
+  let proceedingsPublisher: string | undefined;
+  let proceedingsSubject: string | undefined;
+  let proceedingsEditors: Element | undefined;
   articles.forEach(({ frontmatter }) => {
-    const { biblio, date, venue } = frontmatter;
+    const { biblio, date, venue, editors } = frontmatter;
     if (venue?.title) {
       if (!journalTitle) {
         journalTitle = venue.title;
@@ -219,6 +230,50 @@ function issueDataFromArticles(
         throw new Error(`Conflicting journal dois: "${journalDoi}" and "${venue.doi}"`);
       }
     }
+    if (venue?.series) {
+      if (!journalSeries) {
+        journalSeries = venue.series;
+      } else if (journalSeries !== venue.series) {
+        throw new Error(`Conflicting series: "${journalSeries}" and "${venue.series}"`);
+      }
+    }
+    if (venue?.issn) {
+      if (!journalIssn) {
+        journalIssn = venue.issn;
+      } else if (journalIssn !== venue.issn) {
+        throw new Error(`Conflicting issn: "${journalIssn}" and "${venue.issn}"`);
+      }
+    }
+    if (venue?.number != null) {
+      if (!eventNumber) {
+        eventNumber = venue.number;
+      } else if (eventNumber !== venue.number) {
+        throw new Error(`Conflicting event number: "${eventNumber}" and "${venue.number}"`);
+      }
+    }
+    if (venue?.date != null) {
+      if (!eventDate) {
+        eventDate = venue.date;
+      } else if (eventDate !== venue.date) {
+        throw new Error(`Conflicting event date: "${eventDate}" and "${venue.date}"`);
+      }
+    }
+    if (venue?.location != null) {
+      if (!eventLocation) {
+        eventLocation = venue.location;
+      } else if (eventLocation !== venue.location) {
+        throw new Error(`Conflicting event location: "${eventLocation}" and "${venue.location}"`);
+      }
+    }
+    if (venue?.publisher != null) {
+      if (!proceedingsPublisher) {
+        proceedingsPublisher = venue.publisher;
+      } else if (proceedingsPublisher !== venue.publisher) {
+        throw new Error(
+          `Conflicting proceedings publisher: "${proceedingsPublisher}" and "${venue.publisher}"`,
+        );
+      }
+    }
     if (biblio?.volume) {
       if (!volume) {
         volume = String(biblio.volume);
@@ -240,6 +295,24 @@ function issueDataFromArticles(
         throw new Error(`Conflicting issue dois: "${issueDoi}" and "${biblio.doi}"`);
       }
     }
+    if (biblio?.title) {
+      if (!proceedingsTitle) {
+        proceedingsTitle = biblio.title;
+      } else if (proceedingsTitle !== biblio.title) {
+        throw new Error(
+          `Conflicting proceedings titles: "${proceedingsTitle}" and "${biblio.title}"`,
+        );
+      }
+    }
+    if (biblio?.subject) {
+      if (!proceedingsSubject) {
+        proceedingsSubject = biblio.subject;
+      } else if (proceedingsSubject !== biblio.subject) {
+        throw new Error(
+          `Conflicting proceedings subjects: "${proceedingsSubject}" and "${biblio.subject}"`,
+        );
+      }
+    }
     if (date) {
       const articleDate = new Date(date);
       if (publicationDate == null) {
@@ -248,13 +321,33 @@ function issueDataFromArticles(
         publicationDate = false;
       }
     }
+    if (editors?.length && !proceedingsEditors) {
+      proceedingsEditors = contributorsXmlFromMystEditors(frontmatter);
+    }
   });
   if (!publicationDate && (volume || issue || issueDoi)) {
     throw new Error(
       'if volume/issue/issueDoi are provided, all articles must have the same publication date',
     );
   }
-  return { journalTitle, journalDoi, journalAbbr, volume, issue, issueDoi, publicationDate };
+  return {
+    journalTitle,
+    journalDoi,
+    journalAbbr,
+    volume,
+    issue,
+    issueDoi,
+    publicationDate,
+    journalSeries,
+    journalIssn,
+    eventNumber,
+    eventDate,
+    eventLocation,
+    proceedingsTitle,
+    proceedingsPublisher,
+    proceedingsSubject,
+    proceedingsEditors,
+  };
 }
 
 export async function deposit(session: ISession, opts: DepositOptions) {
@@ -276,9 +369,6 @@ export async function deposit(session: ISession, opts: DepositOptions) {
   }
   if (!depositType) {
     throw new Error('No deposit type specified');
-  }
-  if (depositType === 'conference') {
-    throw new Error('Conference Proceeding not yet implemented 😭');
   }
   if (!name) {
     const resp = await inquirer.prompt([
@@ -313,15 +403,33 @@ export async function deposit(session: ISession, opts: DepositOptions) {
   }
   if (!prefix) prefix = 'curvenote';
   const depositSources = await getDepositSources(session, opts);
-  const depositArticles = await Promise.all(
-    depositSources.map((source) => depositArticleFromSource(session, source)),
+  const depositArticles = (
+    await Promise.all(depositSources.map((source) => depositArticleFromSource(session, source)))
+  ).sort(
+    (a, b) => Number(a.frontmatter.biblio?.first_page) - Number(b.frontmatter.biblio?.first_page),
   );
   if (depositArticles.length === 0) {
     throw Error('nothing found for deposit');
   }
   console.log(`🔍 Found ${plural('%s article(s)', depositArticles)} for ${depositType} deposit`);
-  const { journalTitle, journalAbbr, journalDoi, volume, issue, issueDoi, publicationDate } =
-    issueDataFromArticles(session, depositArticles, opts);
+  const {
+    journalTitle,
+    journalAbbr,
+    journalDoi,
+    volume,
+    issue,
+    issueDoi,
+    publicationDate,
+    journalSeries,
+    journalIssn,
+    eventNumber,
+    eventDate,
+    eventLocation,
+    proceedingsTitle,
+    proceedingsPublisher,
+    proceedingsSubject,
+    proceedingsEditors,
+  } = issueDataFromArticles(session, depositArticles, opts);
   const count = depositArticles.filter(({ frontmatter }) => !frontmatter.doi).length;
   const newDois = await selectNewDois(count, prefix);
   depositArticles.forEach(({ frontmatter, configFile }) => {
@@ -359,7 +467,9 @@ export async function deposit(session: ISession, opts: DepositOptions) {
     }
     console.log('  Articles:');
     depositArticles.forEach(({ frontmatter }) => {
-      console.log(`    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}...`);
+      console.log(
+        `    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}${(frontmatter.title?.length ?? 0) > 30 ? '...' : ''}`,
+      );
     });
     body = journalXml(
       {
@@ -372,6 +482,68 @@ export async function deposit(session: ISession, opts: DepositOptions) {
         return journalArticleFromMyst(session, frontmatter, dois, abstract);
       }),
     );
+  } else if (depositType === 'conference') {
+    if (!journalTitle) {
+      throw new Error(`venue title is required for conference`);
+    }
+    console.log('Deposit summary:');
+    console.log('  Conference:');
+    console.log(`    Title: ${journalTitle}${journalAbbr ? ` (${journalAbbr})` : ''}`);
+    const event = {
+      name: journalTitle,
+      acronym: journalAbbr,
+      number: eventNumber,
+      date: eventDate,
+      location: eventLocation,
+    };
+    let series: ConferenceOptions['series'] | undefined;
+    if (journalSeries && journalIssn) {
+      console.log('  Series:');
+      console.log(`    Title: ${journalSeries}`);
+      console.log(`    ISSN: ${journalIssn}`);
+      if (journalDoi) console.log(`    Doi: ${journalDoi}`);
+      series = {
+        title: journalSeries,
+        original_language_title: journalSeries,
+        issn: journalIssn,
+        doi_data: journalDoi ? curvenoteDoiData(journalDoi) : undefined,
+      };
+    }
+    if (!proceedingsTitle) {
+      throw new Error(`title is required for proceedings`);
+    }
+    if (!publicationDate) {
+      throw new Error(`publication date is required for proceedings`);
+    }
+    if (!proceedingsPublisher) {
+      throw new Error(`publisher is required for proceedings`);
+    }
+    console.log('  Proceedings:');
+    console.log(`    Title: ${proceedingsTitle}`);
+    console.log(`    Publication Date: ${publicationDate.toDateString()}`);
+    if (issueDoi) console.log(`    Doi: ${issueDoi}`);
+    const proceedings = {
+      title: proceedingsTitle,
+      publisher: { name: proceedingsPublisher },
+      publication_date: publicationDate,
+      subject: proceedingsSubject,
+      doi_data: issueDoi ? curvenoteDoiData(issueDoi) : undefined,
+    };
+    console.log('  Papers:');
+    depositArticles.forEach(({ frontmatter }) => {
+      console.log(
+        `    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}${(frontmatter.title?.length ?? 0) > 30 ? '...' : ''}`,
+      );
+    });
+    body = conferenceXml({
+      contributors: proceedingsEditors,
+      event,
+      series,
+      proceedings,
+      conference_papers: depositArticles.map(({ frontmatter, dois, abstract }) => {
+        return conferencePaperFromMyst(frontmatter, dois, abstract);
+      }),
+    });
   } else {
     if (depositArticles.length > 1) {
       throw new Error('preprint deposit may only use a single article');

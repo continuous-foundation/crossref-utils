@@ -3,7 +3,7 @@ import { e, t } from './utils.js';
 import type { JournalArticle, JournalIssue, JournalMetadata } from './types.js';
 import { publicationDateXml } from './dates.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
-import { contributorsXmlFromMyst } from './contributors.js';
+import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { normalize } from 'doi-utils';
 import { fundrefFromMyst } from './funding.js';
 import type { ISession } from 'myst-cli-utils';
@@ -270,7 +270,7 @@ export function journalArticleFromMyst(
   abstract?: Element,
 ): JournalArticle {
   const { title, subtitle, license, doi, date, biblio } = myst;
-  const contributors = contributorsXmlFromMyst(myst);
+  const contributors = contributorsXmlFromMystAuthors(myst);
   const { first_page, last_page } = biblio ?? {};
   const pages = first_page
     ? {

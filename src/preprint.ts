@@ -3,7 +3,7 @@ import { e } from './utils.js';
 import type { Preprint } from './types.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { normalize } from 'doi-utils';
-import { contributorsXmlFromMyst } from './contributors.js';
+import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { dateXml } from './dates.js';
 
 /**
@@ -90,7 +90,7 @@ export function preprintFromMyst(
   abstract?: Element,
 ) {
   const { title, subtitle, license, doi, date } = myst;
-  const contributors = contributorsXmlFromMyst(myst);
+  const contributors = contributorsXmlFromMystAuthors(myst);
   const paperOpts: Preprint = {
     contributors,
     title,

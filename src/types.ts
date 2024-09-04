@@ -89,16 +89,24 @@ export type ConferenceOptions = {
   event: {
     name: string;
     acronym?: string;
-    number?: number;
-    date: string;
+    number?: string | number;
+    date?: string;
+    location?: string;
   };
   contributors?: Element;
   proceedings: {
     title: string;
     publisher: { name: string };
     publication_date: PublicationDate;
+    subject?: string;
+    doi_data?: DoiData;
   };
-  doi_data: DoiData;
+  series?: {
+    title: string;
+    original_language_title?: string;
+    issn: string;
+    doi_data?: DoiData;
+  };
   conference_papers?: Element[];
 };
 

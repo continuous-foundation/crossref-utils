@@ -2,7 +2,7 @@ import type { Element } from 'xast';
 import { e } from './utils.js';
 import type { ConferenceOptions, ConferencePaper } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
-import { contributorsXmlFromMyst } from './contributors.js';
+import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { publicationDateXml } from './dates.js';
 
 /**
@@ -97,7 +97,7 @@ export function conferencePaperFromMyst(
   abstract?: Element,
 ) {
   const { title, subtitle, biblio, license, doi, date } = myst;
-  const contributors = contributorsXmlFromMyst(myst);
+  const contributors = contributorsXmlFromMystAuthors(myst);
   const paperOpts: ConferencePaper = {
     contributors,
     title,
@@ -128,25 +128,83 @@ export function conferencePaperFromMyst(
 export function conferenceXml({
   contributors,
   event,
+  series,
   proceedings,
-  doi_data,
   conference_papers = [],
 }: ConferenceOptions) {
-  return e('conference', [
-    contributors,
-    e('event_metadata', [
-      e('conference_name', event.name),
-      event.acronym ? e('conference_acronym', event.acronym) : undefined,
-      event.number != null ? e('conference_number', String(event.number)) : undefined,
-      e('conference_date', event.date),
-    ]),
-    e('proceedings_metadata', [
-      e('proceedings_title', proceedings.title),
-      e('publisher', [e('publisher_name', proceedings.publisher.name)]),
-      publicationDateXml(proceedings.publication_date),
-      e('noisbn', { reason: 'archive_volume' }),
-      e('doi_data', [e('doi', doi_data.doi), e('resource', doi_data.resource)]),
-    ]),
-    ...conference_papers,
-  ]);
+  const conferenceChildren: Element[] = [];
+  // SciPy has no contributors here
+  if (!event?.name) {
+    throw new Error('Missing conference event name');
+  }
+  if (!proceedings?.title) {
+    throw new Error('Missing proceedings title');
+  }
+  if (!proceedings?.publisher?.name) {
+    throw new Error('Missing proceedings publisher');
+  }
+  const dateElement = publicationDateXml(proceedings.publication_date); // 2022
+  if (!dateElement) {
+    throw new Error('Missing proceedings publication date');
+  }
+  if (series && !series.title) {
+    throw new Error('Missing proceedings series title');
+  }
+  if (series && !series.issn) {
+    throw new Error('Missing proceedings series ISSN');
+  }
+  if (contributors) conferenceChildren.push(contributors);
+  const eventChildren = [e('conference_name', event.name)];
+  if (event.acronym) {
+    eventChildren.push(e('conference_acronym', event.acronym));
+  }
+  if (event.number != null) {
+    eventChildren.push(e('conference_number', String(event.number)));
+  }
+  if (event.location) {
+    eventChildren.push(e('conference_location', event.location));
+  }
+  if (event.date) {
+    eventChildren.push(e('conference_date', event.date));
+  }
+  conferenceChildren.push(e('event_metadata', eventChildren));
+  const proceedingsChildren = [e('proceedings_title', proceedings.title)];
+  if (proceedings.subject) {
+    proceedingsChildren.push(e('proceedings_subject', proceedings.subject));
+  }
+  proceedingsChildren.push(
+    e('publisher', [e('publisher_name', proceedings.publisher.name)]),
+    dateElement,
+    e('noisbn', { reason: 'simple_series' }),
+  );
+  if (proceedings.doi_data) {
+    proceedingsChildren.push(
+      e('doi_data', [
+        e('doi', proceedings.doi_data.doi),
+        e('resource', proceedings.doi_data.resource),
+      ]),
+    );
+  }
+  if (series) {
+    const seriesTitles = [e('title', series.title)];
+    if (series.original_language_title) {
+      seriesTitles.push(e('original_language_title', series.original_language_title));
+    }
+    const seriesChildren = [e('titles', seriesTitles), e('issn', series.issn)];
+    if (series.doi_data) {
+      seriesChildren.push(
+        e('doi_data', [e('doi', series.doi_data.doi), e('resource', series.doi_data.resource)]),
+      );
+    }
+    conferenceChildren.push(
+      e('proceedings_series_metadata', [
+        e('series_metadata', seriesChildren),
+        ...proceedingsChildren,
+      ]),
+    );
+  } else {
+    conferenceChildren.push(e('proceedings_metadata', proceedingsChildren));
+  }
+  conferenceChildren.push(...conference_papers);
+  return e('conference', conferenceChildren);
 }
