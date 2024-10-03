@@ -41,6 +41,11 @@ export function contributorXml(opts: ContributorOptions) {
   return e('person_name', { sequence, contributor_role }, contribChildren);
 }
 
+function isFirstAuthor(index: number, authors: { equal_contributor?: boolean }[]): boolean {
+  if (index === 0) return true;
+  return !!authors[index]?.equal_contributor && isFirstAuthor(index - 1, authors);
+}
+
 export function contributorsXmlFromMystAuthors(
   myst: PageFrontmatter,
   opts?: { contributor_role?: ContributorOptions['contributor_role'] },
@@ -58,7 +63,7 @@ export function contributorsXmlFromMystAuthors(
     authors.map((author, index) =>
       contributorXml({
         ...(author as ContributorOptions),
-        sequence: index === 0 ? 'first' : 'additional',
+        sequence: isFirstAuthor(index, authors) ? 'first' : 'additional',
         contributor_role: opts?.contributor_role ?? 'author',
       }),
     ),
