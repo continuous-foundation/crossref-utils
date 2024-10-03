@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { u } from 'unist-builder';
 import { selectAll } from 'unist-util-select';
 import type { GenericNode, GenericParent } from 'myst-common';
@@ -44,4 +45,16 @@ export function transformXrefToLink(mdast: GenericParent) {
       delete node.label;
     }
   });
+}
+
+export function addDoiToConfig(configFile: string, doi: string) {
+  const file = fs.readFileSync(configFile).toString();
+  const lines = file.split('\n');
+  const projectIndex = lines.findIndex((line) => line.trim() === 'project:');
+  const newLines = [
+    ...lines.slice(0, projectIndex + 1),
+    `  doi: ${doi}`,
+    ...lines.slice(projectIndex + 1),
+  ];
+  fs.writeFileSync(configFile, newLines.join('\n'));
 }

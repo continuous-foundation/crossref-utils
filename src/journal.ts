@@ -3,7 +3,7 @@ import { e, t } from './utils.js';
 import type { JournalArticle, JournalIssue, JournalMetadata } from './types.js';
 import { publicationDateXml } from './dates.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
-import { contributorsXmlFromMyst } from './contributors.js';
+import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { normalize } from 'doi-utils';
 import { fundrefFromMyst } from './funding.js';
 import type { ISession } from 'myst-cli-utils';
@@ -76,9 +76,12 @@ export function journalIssueXml({
   if (!publication_dates?.length) throw new Error('Missing required frontmatter field: date');
   const children: Element[] = [];
   if (contributors) children.push(contributors);
-  const titles = [e('title', title)];
-  if (subtitle) titles.push(e('subtitle', subtitle));
-  children.push(e('titles', titles));
+  if (title || subtitle) {
+    const titles: Element[] = [];
+    if (title) titles.push(e('title', title));
+    if (subtitle) titles.push(e('subtitle', subtitle));
+    children.push(e('titles', titles));
+  }
   children.push(...publication_dates.map(publicationDateXml).filter((d): d is Element => !!d));
   if (volume) {
     children.push(
@@ -266,8 +269,14 @@ export function journalArticleFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ): JournalArticle {
-  const { title, subtitle, license, doi, date } = myst;
-  const contributors = contributorsXmlFromMyst(myst);
+  const { title, subtitle, license, doi, date, first_page, last_page } = myst;
+  const contributors = contributorsXmlFromMystAuthors(myst);
+  const pages = first_page
+    ? {
+        first_page: String(first_page),
+        last_page: last_page ? String(last_page) : undefined,
+      }
+    : undefined;
   const articleOpts: JournalArticle = {
     contributors,
     title,
@@ -276,7 +285,7 @@ export function journalArticleFromMyst(
     license: license?.content?.url,
     abstract,
     funding: fundrefFromMyst(session, myst),
-    // pages?
+    pages,
   };
   if (license && license.content?.CC) {
     // Only put in CC licenses at this time

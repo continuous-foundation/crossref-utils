@@ -1,6 +1,6 @@
 import type { Element } from 'xast';
 import { isUrl } from 'myst-cli-utils';
-import type { PageFrontmatter } from 'myst-frontmatter';
+import type { Contributor, PageFrontmatter } from 'myst-frontmatter';
 import { e } from './utils.js';
 import type { ContributorOptions } from './types.js';
 
@@ -41,7 +41,12 @@ export function contributorXml(opts: ContributorOptions) {
   return e('person_name', { sequence, contributor_role }, contribChildren);
 }
 
-export function contributorsXmlFromMyst(
+function isFirstAuthor(index: number, authors: { equal_contributor?: boolean }[]): boolean {
+  if (index === 0) return true;
+  return !!authors[index]?.equal_contributor && isFirstAuthor(index - 1, authors);
+}
+
+export function contributorsXmlFromMystAuthors(
   myst: PageFrontmatter,
   opts?: { contributor_role?: ContributorOptions['contributor_role'] },
 ): Element | undefined {
@@ -58,8 +63,32 @@ export function contributorsXmlFromMyst(
     authors.map((author, index) =>
       contributorXml({
         ...(author as ContributorOptions),
-        sequence: index === 0 ? 'first' : 'additional',
+        sequence: isFirstAuthor(index, authors) ? 'first' : 'additional',
         contributor_role: opts?.contributor_role ?? 'author',
+      }),
+    ),
+  );
+}
+
+export function contributorsXmlFromMystEditors(myst: PageFrontmatter): Element | undefined {
+  const editors =
+    myst.editors
+      ?.map((editor) => myst.contributors?.find(({ id }) => editor === id))
+      .filter((editor): editor is Contributor => !!editor)
+      .map((editor) => ({
+        ...editor,
+        affiliations: editor.affiliations?.map((aff) =>
+          myst.affiliations?.find((test) => test.id === aff),
+        ),
+      })) ?? [];
+  if (editors.length === 0) return;
+  return e(
+    'contributors',
+    editors.map((editor, index) =>
+      contributorXml({
+        ...(editor as ContributorOptions),
+        sequence: index === 0 ? 'first' : 'additional',
+        contributor_role: 'editor',
       }),
     ),
   );

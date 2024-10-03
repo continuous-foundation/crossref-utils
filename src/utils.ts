@@ -32,3 +32,10 @@ const nanoidAZ9 = customAlphabet(numbers, 4);
 export function generateDoi(prefix: string) {
   return `${prefix}/${nanoidAZ()}${nanoidAZ9()}`;
 }
+
+export function curvenoteDoiData(doi: string) {
+  return {
+    doi,
+    resource: `https://doi.curvenote.com/${doi}`,
+  };
+}
