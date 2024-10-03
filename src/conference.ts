@@ -97,7 +97,7 @@ export function conferencePaperFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ) {
-  const { title, subtitle, biblio, license, doi, date } = myst;
+  const { title, subtitle, first_page, last_page, license, doi, date } = myst;
   const contributors = contributorsXmlFromMystAuthors(myst);
   const paperOpts: ConferencePaper = {
     contributors,
@@ -114,10 +114,10 @@ export function conferencePaperFromMyst(
   if (doi) {
     paperOpts.doi_data = { doi, resource: `https://doi.curvenote.com/${doi}` };
   }
-  if (biblio?.first_page) {
-    paperOpts.pages = { first_page: `${biblio.first_page}` };
-    if (biblio.last_page) {
-      paperOpts.pages.last_page = `${biblio.last_page}`;
+  if (first_page) {
+    paperOpts.pages = { first_page: String(first_page) };
+    if (last_page) {
+      paperOpts.pages.last_page = String(last_page);
     }
   }
   if (citations && Object.keys(citations).length) {

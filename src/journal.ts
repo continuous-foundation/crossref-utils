@@ -269,9 +269,8 @@ export function journalArticleFromMyst(
   citations?: Record<string, string>,
   abstract?: Element,
 ): JournalArticle {
-  const { title, subtitle, license, doi, date, biblio } = myst;
+  const { title, subtitle, license, doi, date, first_page, last_page } = myst;
   const contributors = contributorsXmlFromMystAuthors(myst);
-  const { first_page, last_page } = biblio ?? {};
   const pages = first_page
     ? {
         first_page: String(first_page),

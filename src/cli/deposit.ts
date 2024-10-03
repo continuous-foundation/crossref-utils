@@ -192,8 +192,9 @@ function issueDataFromArticles(
   opts: DepositOptions,
 ) {
   let { journalTitle, journalAbbr, journalDoi } = opts;
-  let volume: string | undefined;
-  let issue: string | undefined;
+  let volumeNumber: string | undefined;
+  let volumeDoi: string | undefined;
+  let issueNumber: string | undefined;
   let issueDoi: string | undefined;
   let publicationDate: Date | false | undefined;
   let journalSeries: string | undefined;
@@ -206,7 +207,7 @@ function issueDataFromArticles(
   let proceedingsSubject: string | undefined;
   let proceedingsEditors: Element | undefined;
   articles.forEach(({ frontmatter }) => {
-    const { biblio, date, venue, editors } = frontmatter;
+    const { volume, issue, date, venue, editors } = frontmatter;
     if (venue?.title) {
       if (!journalTitle) {
         journalTitle = venue.title;
@@ -274,42 +275,49 @@ function issueDataFromArticles(
         );
       }
     }
-    if (biblio?.volume) {
-      if (!volume) {
-        volume = String(biblio.volume);
-      } else if (volume !== String(biblio.volume)) {
-        throw new Error(`Conflicting volumes: "${volume}" and "${biblio.volume}"`);
+    if (volume?.number) {
+      if (!volumeNumber) {
+        volumeNumber = String(volume.number);
+      } else if (volumeNumber !== String(volume.number)) {
+        throw new Error(`Conflicting volumes: "${volumeNumber}" and "${volume.number}"`);
       }
     }
-    if (biblio?.issue) {
-      if (!issue) {
-        issue = String(biblio.issue);
-      } else if (issue !== String(biblio.issue)) {
-        throw new Error(`Conflicting issues: "${issue}" and "${biblio.issue}"`);
+    if (volume?.doi) {
+      if (!volumeDoi) {
+        volumeDoi = volume.doi;
+      } else if (volumeDoi !== volume.doi) {
+        throw new Error(`Conflicting volume dois: "${volumeDoi}" and "${volume.doi}"`);
       }
     }
-    if (biblio?.doi) {
+    if (issue?.number) {
+      if (!issueNumber) {
+        issueNumber = String(issue.number);
+      } else if (issueNumber !== String(issue.number)) {
+        throw new Error(`Conflicting issues: "${issueNumber}" and "${issue.number}"`);
+      }
+    }
+    if (issue?.doi) {
       if (!issueDoi) {
-        issueDoi = biblio.doi;
-      } else if (issueDoi !== biblio.doi) {
-        throw new Error(`Conflicting issue dois: "${issueDoi}" and "${biblio.doi}"`);
+        issueDoi = issue.doi;
+      } else if (issueDoi !== issue.doi) {
+        throw new Error(`Conflicting issue dois: "${issueDoi}" and "${issue.doi}"`);
       }
     }
-    if (biblio?.title) {
+    if (volume?.title) {
       if (!proceedingsTitle) {
-        proceedingsTitle = biblio.title;
-      } else if (proceedingsTitle !== biblio.title) {
+        proceedingsTitle = volume.title;
+      } else if (proceedingsTitle !== volume.title) {
         throw new Error(
-          `Conflicting proceedings titles: "${proceedingsTitle}" and "${biblio.title}"`,
+          `Conflicting proceedings titles: "${proceedingsTitle}" and "${volume.title}"`,
         );
       }
     }
-    if (biblio?.subject) {
+    if (volume?.subject) {
       if (!proceedingsSubject) {
-        proceedingsSubject = biblio.subject;
-      } else if (proceedingsSubject !== biblio.subject) {
+        proceedingsSubject = volume.subject;
+      } else if (proceedingsSubject !== volume.subject) {
         throw new Error(
-          `Conflicting proceedings subjects: "${proceedingsSubject}" and "${biblio.subject}"`,
+          `Conflicting proceedings subjects: "${proceedingsSubject}" and "${volume.subject}"`,
         );
       }
     }
@@ -325,17 +333,18 @@ function issueDataFromArticles(
       proceedingsEditors = contributorsXmlFromMystEditors(frontmatter);
     }
   });
-  if (!publicationDate && (volume || issue || issueDoi)) {
+  if (!publicationDate && (volumeNumber || volumeDoi || issueNumber || issueDoi)) {
     throw new Error(
-      'if volume/issue/issueDoi are provided, all articles must have the same publication date',
+      'if volume/volumeDoi/issue/issueDoi are provided, all articles must have the same publication date',
     );
   }
   return {
     journalTitle,
     journalDoi,
     journalAbbr,
-    volume,
-    issue,
+    volumeNumber,
+    volumeDoi,
+    issueNumber,
     issueDoi,
     publicationDate,
     journalSeries,
@@ -405,9 +414,7 @@ export async function deposit(session: ISession, opts: DepositOptions) {
   const depositSources = await getDepositSources(session, opts);
   const depositArticles = (
     await Promise.all(depositSources.map((source) => depositArticleFromSource(session, source)))
-  ).sort(
-    (a, b) => Number(a.frontmatter.biblio?.first_page) - Number(b.frontmatter.biblio?.first_page),
-  );
+  ).sort((a, b) => Number(a.frontmatter.first_page) - Number(b.frontmatter.first_page));
   if (depositArticles.length === 0) {
     throw Error('nothing found for deposit');
   }
@@ -416,8 +423,9 @@ export async function deposit(session: ISession, opts: DepositOptions) {
     journalTitle,
     journalAbbr,
     journalDoi,
-    volume,
-    issue,
+    volumeNumber,
+    volumeDoi,
+    issueNumber,
     issueDoi,
     publicationDate,
     journalSeries,
@@ -449,20 +457,21 @@ export async function deposit(session: ISession, opts: DepositOptions) {
     console.log('  Journal:');
     console.log(`    Title: ${journalTitle}${journalAbbr ? ` (${journalAbbr})` : ''}`);
     if (journalDoi) console.log(`    Doi: ${journalDoi}`);
-    if (volume || issue || issueDoi) {
+    if (volumeNumber || issueNumber || issueDoi) {
       if (!publicationDate) {
         throw new Error(`publication date is required for journal issue`);
       }
       console.log('  Issue:');
       console.log(`    Publication Date: ${publicationDate.toDateString()}`);
-      if (volume) console.log(`    Volume: ${volume}`);
-      if (issue) console.log(`    Issue: ${issue}`);
-      if (issueDoi) console.log(`    Doi: ${issueDoi}`);
+      if (volumeNumber) console.log(`    Volume: ${volumeNumber}`);
+      if (issueNumber) console.log(`    Issue: ${issueNumber}`);
+      if (issueDoi) console.log(`    Issue DOI: ${issueDoi}`);
       journalIssue = {
         publication_dates: [publicationDate],
-        volume,
-        issue,
+        volume: volumeNumber,
+        issue: issueNumber,
         doi_data: issueDoi ? curvenoteDoiData(issueDoi) : undefined,
+        // TODO: add volume doi?
       };
     }
     console.log('  Articles:');
@@ -521,13 +530,13 @@ export async function deposit(session: ISession, opts: DepositOptions) {
     console.log('  Proceedings:');
     console.log(`    Title: ${proceedingsTitle}`);
     console.log(`    Publication Date: ${publicationDate.toDateString()}`);
-    if (issueDoi) console.log(`    Doi: ${issueDoi}`);
+    if (volumeDoi) console.log(`    Doi: ${volumeDoi}`);
     const proceedings = {
       title: proceedingsTitle,
       publisher: { name: proceedingsPublisher },
       publication_date: publicationDate,
       subject: proceedingsSubject,
-      doi_data: issueDoi ? curvenoteDoiData(issueDoi) : undefined,
+      doi_data: volumeDoi ? curvenoteDoiData(volumeDoi) : undefined,
     };
     console.log('  Papers:');
     depositArticles.forEach(({ frontmatter }) => {
