@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { Command, Option } from 'commander';
 import inquirer from 'inquirer';
 import { v4 as uuid } from 'uuid';
+import { load as yamlLoad } from 'js-yaml';
 import {
   Session,
   filterPages,
@@ -17,7 +18,7 @@ import {
 import type { ISession } from 'myst-cli';
 import { clirun } from 'myst-cli-utils';
 import type { GenericParent } from 'myst-common';
-import { extractPart, plural } from 'myst-common';
+import { extractPart, plural, toText } from 'myst-common';
 import { JatsSerializer } from 'myst-to-jats';
 import { VFile } from 'vfile';
 import { u } from 'unist-builder';
@@ -28,12 +29,13 @@ import { preprintFromMyst } from '../preprint.js';
 import { addDoiToConfig, element2JatsUnist, transformXrefToLink } from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { selectNewDois } from './generate.js';
-import type { ConferenceOptions, JournalIssue } from '../types.js';
+import type { ConferenceOptions, DatabaseOptions, JournalIssue } from '../types.js';
 import { curvenoteDoiData } from '../utils.js';
 import { conferencePaperFromMyst, conferenceXml } from '../conference.js';
 import { contributorsXmlFromMystEditors } from '../contributors.js';
+import { databaseXml, datasetFromMyst } from '../dataset.js';
 
-type DepositType = 'conference' | 'journal' | 'preprint';
+type DepositType = 'conference' | 'journal' | 'preprint' | 'dataset';
 
 type DepositOptions = {
   type?: DepositType;
@@ -166,11 +168,19 @@ async function getDepositSources(
     depositFile = resp.depositFile;
     return [{ projectPath, depositFile }];
   }
-  // If there is no project on the current path, load all projects in child folders
+  // If there is no project on the current path, load all projects in child folders (up to two levels deep)
   const subdirs = fs
     .readdirSync('.')
     .map((item) => path.resolve(item))
-    .filter((item) => fs.lstatSync(item).isDirectory());
+    .filter((item) => fs.lstatSync(item).isDirectory())
+    .map((dir) => {
+      const files = fs.readdirSync(dir);
+      if (files.includes('myst.yml') || files.includes('curvenote.yml')) return dir;
+      return files
+        .map((item) => path.join(dir, item))
+        .filter((item) => fs.lstatSync(item).isDirectory());
+    })
+    .flat();
   const depositSources = (
     await Promise.all(
       subdirs.map(async (dir) => {
@@ -371,6 +381,7 @@ export async function deposit(session: ISession, opts: DepositOptions) {
           { name: 'Posted Content / Preprint', value: 'preprint' },
           { name: 'Journal', value: 'journal' },
           { name: 'Conference Proceeding', value: 'conference' },
+          { name: 'Dataset', value: 'dataset' },
         ],
       },
     ]);
@@ -553,6 +564,33 @@ export async function deposit(session: ISession, opts: DepositOptions) {
         return conferencePaperFromMyst(frontmatter, dois, abstract);
       }),
     });
+  } else if (depositType === 'dataset') {
+    if (!journalTitle) {
+      throw new Error(`venue title is required for database / datasets`);
+    }
+    console.log('Deposit summary:');
+    console.log('  Database:');
+    console.log(`    Title: ${journalTitle}${journalAbbr ? ` (${journalAbbr})` : ''}`);
+    const database: DatabaseOptions = {
+      contributors: proceedingsEditors,
+      title: journalTitle,
+    };
+    console.log('  Datasets:');
+    depositArticles.forEach(({ frontmatter }) => {
+      console.log(
+        `    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}${(frontmatter.title?.length ?? 0) > 30 ? '...' : ''}`,
+      );
+    });
+    body = databaseXml({
+      ...database,
+      datasets: depositArticles.map(({ frontmatter, dois, abstract, configFile }) => {
+        // TODO: simplify the abstract to b/u/sup/sub etc.
+        return datasetFromMyst(frontmatter, dois, toText(abstract as any), ({ doi }) => ({
+          doi: `${doi}`,
+          resource: `https://zenodo.org/records/${getZenodoId(configFile)}`,
+        }));
+      }),
+    });
   } else {
     if (depositArticles.length > 1) {
       throw new Error('preprint deposit may only use a single article');
@@ -577,7 +615,7 @@ function makeDepositCLI(program: Command) {
     .addOption(new Option('--file <value>', 'File to deposit'))
     .addOption(
       new Option('--type <value>', 'Deposit type')
-        .choices(['conference', 'journal', 'preprint'])
+        .choices(['conference', 'journal', 'preprint', 'dataset'])
         .default('preprint'),
     )
     .addOption(new Option('--id <value>', 'Deposit batch id'))
@@ -592,4 +630,15 @@ function makeDepositCLI(program: Command) {
 
 export function addDepositCLI(program: Command) {
   program.addCommand(makeDepositCLI(program));
+}
+
+function getZenodoId(configFile: string | undefined): number | undefined {
+  // This shouldn't be needed in the future
+  if (!configFile) return undefined;
+  const data = yamlLoad(fs.readFileSync(configFile).toString()) as {
+    project: { zenodo?: string };
+  };
+  const url = data?.project?.zenodo;
+  if (!url) return undefined;
+  return Number.parseInt(String(url).split('/').slice(-1)[0], 10);
 }

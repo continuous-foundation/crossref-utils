@@ -110,6 +110,126 @@ export type ConferenceOptions = {
   conference_papers?: Element[];
 };
 
+export type Titles =
+  | string
+  | {
+      title: string;
+      subtitle?: string;
+      original_language_title?: string;
+      original_language_subtitle?: string;
+    };
+
+type InterWorkRelationTypes =
+  | 'isDerivedFrom'
+  | 'hasDerivation'
+  | 'isReviewOf'
+  | 'hasReview'
+  | 'isCommentOn'
+  | 'hasComment'
+  | 'isReplyTo'
+  | 'hasReply'
+  | 'basedOnData'
+  | 'isDataBasisFor'
+  | 'hasRelatedMaterial'
+  | 'isRelatedMaterial'
+  | 'isCompiledBy'
+  | 'compiles'
+  | 'isDocumentedBy'
+  | 'documents'
+  | 'isSupplementTo'
+  | 'isSupplementedBy'
+  | 'isContinuedBy'
+  | 'continues'
+  | 'isPartOf'
+  | 'hasPart'
+  | 'references'
+  | 'isReferencedBy'
+  | 'isBasedOn'
+  | 'isBasisFor'
+  | 'requires'
+  | 'isRequiredBy'
+  | 'finances'
+  | 'isFinancedBy';
+
+type IntraWorkRelationTypes =
+  | 'isTranslationOf'
+  | 'hasTranslation'
+  | 'isPreprintOf'
+  | 'hasPreprint'
+  | 'isManuscriptOf'
+  | 'hasManuscript'
+  | 'isExpressionOf'
+  | 'hasExpression'
+  | 'isManifestationOf'
+  | 'hasManifestation'
+  | 'isReplacedBy'
+  | 'replaces'
+  | 'isSameAs'
+  | 'isIdenticalTo'
+  | 'isVariantFormOf'
+  | 'isOriginalFormOf'
+  | 'isVersionOf'
+  | 'hasVersion'
+  | 'isFormatOf'
+  | 'hasFormat';
+
+type IdentifierType =
+  | 'doi'
+  | 'issn'
+  | 'isbn'
+  | 'uri'
+  | 'pmid'
+  | 'pmcid'
+  | 'purl'
+  | 'arxiv'
+  | 'ark'
+  | 'handle'
+  | 'uuid'
+  | 'ecli'
+  | 'accession'
+  | 'other';
+
+type RelatedItem =
+  | { kind: 'intra'; relationship: IntraWorkRelationTypes; id: string; idType: IdentifierType }
+  | { kind: 'inter'; relationship: InterWorkRelationTypes; id: string; idType: IdentifierType };
+
+export type DatabaseOptions = {
+  contributors?: Element;
+  title?: Titles;
+  description?: Element[] | string;
+  date?: {
+    created?: PublicationDate;
+    published?: PublicationDate;
+    updated?: PublicationDate;
+  };
+  publisher?: { name: string; place?: string };
+  institution?: {
+    name: string;
+    id?: string;
+    acronym?: string;
+    place?: string;
+    department?: string;
+  };
+  doi_data?: DoiData;
+  datasets?: Element[];
+};
+
+export type DatasetMetadata = {
+  type?: 'record' | 'collection' | 'crossmark_policy' | 'other';
+  contributors?: Element;
+  title?: Titles;
+  date?: {
+    created?: PublicationDate;
+    published?: PublicationDate;
+    updated?: PublicationDate;
+  };
+  description?: Element[] | string;
+  // format?: string;
+  relations?: RelatedItem[];
+  doi_data?: DoiData;
+  citations?: Record<string, string>; // For now, this is { key: doi }
+};
+
 export type JournalMetadata = {
   title: string;
   abbrevTitle?: string;
