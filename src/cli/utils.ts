@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { u } from 'unist-builder';
 import { selectAll } from 'unist-util-select';
-import type { GenericNode, GenericParent } from 'myst-common';
+import { liftChildren, type GenericNode, type GenericParent } from 'myst-common';
 
 type JatsAttributes = Record<string, string | undefined>;
 
@@ -45,6 +45,22 @@ export function transformXrefToLink(mdast: GenericParent) {
       delete node.label;
     }
   });
+}
+
+/**
+ * Transform citations in abstract to plain text since bibliography is not currently available
+ */
+export function transformCiteToText(mdast: GenericParent) {
+  const parentheticalCites = [
+    ...selectAll(':not(citeGroup) > cite[kind=parenthetical]', mdast),
+    ...selectAll('citeGroup[kind=parenthetical]', mdast),
+  ] as GenericParent[];
+  parentheticalCites.forEach((cite) => {
+    if (!cite.children) return;
+    cite.children = [{ type: 'text', value: '(' }, ...cite.children, { type: 'text', value: ')' }];
+  });
+  liftChildren(mdast, 'cite');
+  liftChildren(mdast, 'citeGroup');
 }
 
 export function addDoiToConfig(configFile: string, doi: string) {

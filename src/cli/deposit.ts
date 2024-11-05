@@ -25,7 +25,12 @@ import type { Element } from 'xast';
 import { DoiBatch } from '../batch.js';
 import { journalArticleFromMyst, journalXml } from '../journal.js';
 import { preprintFromMyst } from '../preprint.js';
-import { addDoiToConfig, element2JatsUnist, transformXrefToLink } from './utils.js';
+import {
+  addDoiToConfig,
+  element2JatsUnist,
+  transformCiteToText,
+  transformXrefToLink,
+} from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { selectNewDois } from './generate.js';
 import type { ConferenceOptions, JournalIssue } from '../types.js';
@@ -111,6 +116,7 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   let abstract: Element | undefined;
   if (abstractPart) {
     transformXrefToLink(abstractPart);
+    transformCiteToText(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
     abstract = u(
