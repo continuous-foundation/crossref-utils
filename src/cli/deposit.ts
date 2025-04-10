@@ -468,12 +468,13 @@ export async function deposit(session: ISession, opts: DepositOptions) {
 
   let body: Element;
   if (depositType === 'journal') {
-    if (!journalTitle || !journalDoi) throw new Error('Journal title and DOI are required');
+    if (!journalTitle) throw new Error('Journal title is required');
+    if (!journalDoi) throw new Error('Journal DOI is required');
     let journalIssue: JournalIssue | undefined;
     console.log('Deposit summary:');
     console.log('  Journal:');
     console.log(`    Title: ${journalTitle}${journalAbbr ? ` (${journalAbbr})` : ''}`);
-    if (journalDoi) console.log(`    Doi: ${journalDoi}`);
+    console.log(`    Doi: ${journalDoi}`);
     if (volumeNumber || issueNumber || issueDoi) {
       if (!publicationDate) {
         throw new Error(`publication date is required for journal issue`);
@@ -492,10 +493,17 @@ export async function deposit(session: ISession, opts: DepositOptions) {
       };
     }
     console.log('  Articles:');
+    const journalDoiPrefix = journalDoi.split('/')[0];
     depositArticles.forEach(({ frontmatter }) => {
       console.log(
         `    ${frontmatter.doi} - ${frontmatter.title?.slice(0, 30)}${(frontmatter.title?.length ?? 0) > 30 ? '...' : ''}`,
       );
+      const articleDoiPrefix = frontmatter.doi?.split('/')[0];
+      if (journalDoiPrefix !== articleDoiPrefix) {
+        session.log.warn(
+          `    Article DOI prefix ${articleDoiPrefix} does not match Journal DOI prefix ${journalDoiPrefix}`,
+        );
+      }
     });
     body = journalXml(
       {
