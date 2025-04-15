@@ -74,3 +74,10 @@ export function addDoiToConfig(configFile: string, doi: string) {
   ];
   fs.writeFileSync(configFile, newLines.join('\n'));
 }
+
+export function transformNewlineToSpace(mdast: GenericParent) {
+  const text = selectAll('text', mdast) as GenericNode[];
+  text.forEach((t) => {
+    t.value = t.value?.replaceAll(/\s*\n\s*/g, ' ');
+  });
+}

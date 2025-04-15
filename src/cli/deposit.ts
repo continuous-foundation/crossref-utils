@@ -30,6 +30,7 @@ import {
   addDoiToConfig,
   element2JatsUnist,
   transformCiteToText,
+  transformNewlineToSpace,
   transformXrefToLink,
 } from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
@@ -119,6 +120,7 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   if (abstractPart) {
     transformXrefToLink(abstractPart);
     transformCiteToText(abstractPart);
+    transformNewlineToSpace(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
     abstract = u(
