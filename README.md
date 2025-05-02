@@ -69,7 +69,7 @@ You may also specify in the frontmatter:
 
 This type is used to register a conference proceedings. Similar to "journal" deposits, this will attempt to discover multiple articles.
 
-In addition to the above article metadata for each article, this deposit type requires conference title, proceedings title, and proceedings publisher, set in `myst.yml` (Note - the mapping from available MyST frontmatter fields (venue/volume/journal) to required deposit fields (conference/proceedings/series) is currently complex and unintuitive, so be careful!):
+In addition to the above article metadata for each article, this deposit type requires conference title, proceedings title, and proceedings publisher, set in `myst.yml`:
 
 - `venue.title` - conference title
 - `volume.title` - proceedings title
