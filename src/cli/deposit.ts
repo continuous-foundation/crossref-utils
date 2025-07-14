@@ -13,6 +13,7 @@ import {
   loadProject,
   parseMyst,
   processProject,
+  resolveFrontmatterParts,
   selectors,
 } from 'myst-cli';
 import type { ISession } from 'myst-cli';
@@ -85,7 +86,9 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     } else {
       fileContents.forEach(({ mdast }) => {
         if (abstractPart) return;
-        abstractPart = extractPart(mdast, 'abstract');
+        abstractPart = extractPart(mdast, 'abstract', {
+          frontmatterParts: resolveFrontmatterParts(session, projectFrontmatter),
+        });
       });
     }
     fileContents.forEach(({ references }) => {
@@ -108,7 +111,9 @@ export async function depositArticleFromSource(session: ISession, depositSource:
       ? projectFrontmatter?.subtitle ?? undefined
       : frontmatter?.subtitle;
     frontmatter = { ...fileContent.frontmatter, title, subtitle };
-    abstractPart = extractPart(fileContent.mdast, 'abstract');
+    abstractPart = extractPart(fileContent.mdast, 'abstract', {
+      frontmatterParts: resolveFrontmatterParts(session, frontmatter),
+    });
     fileContent.references.cite?.order.forEach((key) => {
       const value = fileContent.references.cite?.data[key].doi;
       if (value) dois[key] = value;
