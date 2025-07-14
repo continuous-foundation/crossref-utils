@@ -122,9 +122,24 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   }
 
   let abstract: Element | undefined;
+  const description = (frontmatter?.description || projectFrontmatter?.description)?.trim();
   if (abstractPart) {
     transformXrefToLink(abstractPart);
     transformCiteToText(abstractPart);
+    transformNewlineToSpace(abstractPart);
+    const serializer = new JatsSerializer(new VFile(), abstractPart as any);
+    const jats = serializer.render(true).elements();
+    abstract = u(
+      'element',
+      { name: 'jats:abstract' },
+      jats.map((e) => element2JatsUnist(e)),
+    ) as Element;
+  } else if (description) {
+    // Use the project description as the fallback for the abstract
+    abstractPart = {
+      type: 'root',
+      children: [{ type: 'paragraph', children: [{ type: 'text', value: description }] }],
+    };
     transformNewlineToSpace(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
