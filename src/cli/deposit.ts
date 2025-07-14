@@ -617,7 +617,7 @@ export async function deposit(session: ISession, opts: DepositOptions) {
       throw new Error('preprint deposit may only use a single article');
     }
     const { frontmatter, dois, abstract } = depositArticles[0];
-    body = preprintFromMyst(frontmatter, dois, abstract);
+    body = preprintFromMyst(session, frontmatter, dois, abstract);
   }
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },
