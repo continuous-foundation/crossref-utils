@@ -6,7 +6,7 @@ import { normalize } from 'doi-utils';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { dateXml } from './dates.js';
 import { createFundingXml, fundrefFromMyst } from './funding.js';
-import { ISession } from 'myst-cli';
+import type { ISession } from 'myst-cli';
 
 /**
  * Create posted content xml
