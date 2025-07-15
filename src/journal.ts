@@ -1,11 +1,11 @@
 import type { Element } from 'xast';
-import { e, t } from './utils.js';
+import { e } from './utils.js';
 import type { JournalArticle, JournalIssue, JournalMetadata } from './types.js';
 import { publicationDateXml } from './dates.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { normalize } from 'doi-utils';
-import { fundrefFromMyst } from './funding.js';
+import { createFundingXml, fundrefFromMyst } from './funding.js';
 import type { ISession } from 'myst-cli-utils';
 
 /**
@@ -172,32 +172,9 @@ export function journalArticleXml({
     children.push(e('pages', pageChildren));
   }
   // publisher_item
-  if (funding?.length) {
-    children.push(
-      e(
-        'fr:program',
-        { name: 'fundref' },
-        funding.map((fundingItem) => {
-          if (!fundingItem.sources.length) {
-            throw new Error('Fundref entry must have at least one source');
-          }
-          return e('fr:assertion', { name: 'fundgroup' }, [
-            ...fundingItem.sources.map((source) => {
-              return e('fr:assertion', { name: 'funder_name' }, [
-                t(source.name),
-                ...source.identifiers.map((id) => {
-                  return e('fr:assertion', { name: 'funder_identifier' }, id);
-                }),
-              ]);
-            }),
-            ...fundingItem.awardNumbers.map((awardNumber) => {
-              return e('fr:assertion', { name: 'award_number' }, awardNumber);
-            }),
-          ]);
-        }),
-      ),
-    );
-  }
+  const fundingXml = createFundingXml(funding);
+  if (fundingXml) children.push(fundingXml);
+
   if (license) {
     children.push(
       e('ai:program', { name: 'AccessIndicators' }, [

@@ -13,6 +13,7 @@ import {
   loadProject,
   parseMyst,
   processProject,
+  resolveFrontmatterParts,
   selectors,
 } from 'myst-cli';
 import type { ISession } from 'myst-cli';
@@ -85,7 +86,9 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     } else {
       fileContents.forEach(({ mdast }) => {
         if (abstractPart) return;
-        abstractPart = extractPart(mdast, 'abstract');
+        abstractPart = extractPart(mdast, 'abstract', {
+          frontmatterParts: resolveFrontmatterParts(session, projectFrontmatter),
+        });
       });
     }
     fileContents.forEach(({ references }) => {
@@ -108,7 +111,9 @@ export async function depositArticleFromSource(session: ISession, depositSource:
       ? projectFrontmatter?.subtitle ?? undefined
       : frontmatter?.subtitle;
     frontmatter = { ...fileContent.frontmatter, title, subtitle };
-    abstractPart = extractPart(fileContent.mdast, 'abstract');
+    abstractPart = extractPart(fileContent.mdast, 'abstract', {
+      frontmatterParts: resolveFrontmatterParts(session, frontmatter),
+    });
     fileContent.references.cite?.order.forEach((key) => {
       const value = fileContent.references.cite?.data[key].doi;
       if (value) dois[key] = value;
@@ -117,9 +122,24 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   }
 
   let abstract: Element | undefined;
+  const description = (frontmatter?.description || projectFrontmatter?.description)?.trim();
   if (abstractPart) {
     transformXrefToLink(abstractPart);
     transformCiteToText(abstractPart);
+    transformNewlineToSpace(abstractPart);
+    const serializer = new JatsSerializer(new VFile(), abstractPart as any);
+    const jats = serializer.render(true).elements();
+    abstract = u(
+      'element',
+      { name: 'jats:abstract' },
+      jats.map((e) => element2JatsUnist(e)),
+    ) as Element;
+  } else if (description) {
+    // Use the project description as the fallback for the abstract
+    abstractPart = {
+      type: 'root',
+      children: [{ type: 'paragraph', children: [{ type: 'text', value: description }] }],
+    };
     transformNewlineToSpace(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
@@ -612,7 +632,7 @@ export async function deposit(session: ISession, opts: DepositOptions) {
       throw new Error('preprint deposit may only use a single article');
     }
     const { frontmatter, dois, abstract } = depositArticles[0];
-    body = preprintFromMyst(frontmatter, dois, abstract);
+    body = preprintFromMyst(session, frontmatter, dois, abstract);
   }
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },

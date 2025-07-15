@@ -1,6 +1,7 @@
 import type { Award, ProjectFrontmatter } from 'myst-frontmatter';
 import type { Fundref } from './types.js';
 import type { ISession } from 'myst-cli-utils';
+import { e, t } from './utils.js';
 
 export function fundrefFromMyst(
   session: ISession,
@@ -34,4 +35,30 @@ export function fundrefFromMyst(
     const awardNumbers = id ? [id] : [];
     return { sources, awardNumbers };
   });
+}
+
+export function createFundingXml(funding?: Fundref[]) {
+  if (!funding || funding.length === 0) return null;
+  return e(
+    'fr:program',
+    { name: 'fundref' },
+    funding.map((fundingItem) => {
+      if (!fundingItem.sources.length) {
+        throw new Error('Fundref entry must have at least one source');
+      }
+      return e('fr:assertion', { name: 'fundgroup' }, [
+        ...fundingItem.sources.map((source) => {
+          return e('fr:assertion', { name: 'funder_name' }, [
+            t(source.name),
+            ...source.identifiers.map((id) => {
+              return e('fr:assertion', { name: 'funder_identifier' }, id);
+            }),
+          ]);
+        }),
+        ...fundingItem.awardNumbers.map((awardNumber) => {
+          return e('fr:assertion', { name: 'award_number' }, awardNumber);
+        }),
+      ]);
+    }),
+  );
 }

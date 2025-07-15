@@ -5,6 +5,8 @@ import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { normalize } from 'doi-utils';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { dateXml } from './dates.js';
+import { createFundingXml, fundrefFromMyst } from './funding.js';
+import type { ISession } from 'myst-cli';
 
 /**
  * Create posted content xml
@@ -19,6 +21,7 @@ export function preprintXml({
   title,
   subtitle,
   abstract,
+  funding,
   doi_data,
   citations,
   license,
@@ -35,6 +38,10 @@ export function preprintXml({
   children.push(e('titles', titles));
   children.push(posted_date);
   if (abstract) children.push(abstract);
+
+  const fundingXml = createFundingXml(funding);
+  if (fundingXml) children.push(fundingXml);
+
   if (license) {
     children.push(
       e('ai:program', { name: 'AccessIndicators' }, [
@@ -85,6 +92,7 @@ export function preprintXml({
 }
 
 export function preprintFromMyst(
+  session: ISession,
   myst: ProjectFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
@@ -98,6 +106,7 @@ export function preprintFromMyst(
     date: typeof date === 'string' ? new Date(date) : undefined,
     license: license?.content?.url,
     abstract,
+    funding: fundrefFromMyst(session, myst),
   };
   if (license && license.content?.CC) {
     // Only put in CC licenses at this time
