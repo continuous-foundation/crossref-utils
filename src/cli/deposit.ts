@@ -41,6 +41,7 @@ import { curvenoteDoiData } from '../utils.js';
 import { conferencePaperFromMyst, conferenceXml } from '../conference.js';
 import { contributorsXmlFromMystEditors } from '../contributors.js';
 import { databaseXml, datasetFromMyst } from '../dataset.js';
+import { normalize } from 'doi-utils';
 
 type DepositType = 'conference' | 'journal' | 'preprint' | 'dataset';
 
@@ -93,7 +94,7 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     }
     fileContents.forEach(({ references }) => {
       references.cite?.order.forEach((key) => {
-        const value = references.cite?.data[key].doi;
+        const value = normalize(references.cite?.data[key].doi);
         if (value) dois[key] = value;
         else session.log.warn(`Citation without DOI excluded from crossref deposit: ${key}`);
       });
