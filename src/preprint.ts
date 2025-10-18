@@ -83,7 +83,7 @@ export function preprintXml({
       e(
         'citation_list',
         Object.entries(citations).map(([key, value]) => {
-          return e('citation', { key }, [e('doi', normalize(value))]);
+          return e('citation', { key }, [e('doi', value)]);
         }),
       ),
     );

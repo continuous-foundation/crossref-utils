@@ -2,7 +2,6 @@ import type { Element } from 'xast';
 import { e } from './utils.js';
 import type { ConferenceOptions, ConferencePaper } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
-import { normalize } from 'doi-utils';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { publicationDateXml } from './dates.js';
 
@@ -84,7 +83,7 @@ export function conferencePaperXml({
       e(
         'citation_list',
         Object.entries(citations).map(([key, value]) => {
-          return e('citation', { key }, [e('doi', normalize(value))]);
+          return e('citation', { key }, [e('doi', value)]);
         }),
       ),
     );
