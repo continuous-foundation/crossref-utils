@@ -1,6 +1,8 @@
 import { describe, test, expect } from 'vitest';
+import { u } from 'unist-builder';
 import { toXml } from 'xast-util-to-xml';
 import { publicationDateXml } from '../src';
+import { unwrapJatsXrefElements } from '../src/cli/utils.js';
 import type { Element } from 'xast';
 
 describe('CrossRef Utilities', () => {
@@ -27,5 +29,33 @@ describe('CrossRef Utilities', () => {
     } else {
       expect(toXml(publicationDateXml(date) as Element)).toBe(xml);
     }
+  });
+});
+
+describe('unwrapJatsXrefElements', () => {
+  test('removes jats:xref wrapper, keeps children', () => {
+    const tree = u('element', { name: 'jats:p', attributes: {} }, [
+      u('text', 'See '),
+      u('element', { name: 'jats:xref', attributes: { 'ref-type': 'fig', rid: 'f1' } }, [
+        u('element', { name: 'jats:bold', attributes: {} }, [u('text', 'Figure 1')]),
+      ]),
+      u('text', ' for details.'),
+    ]) as Element;
+    const out = unwrapJatsXrefElements(tree);
+    const xml = toXml(out);
+    expect(xml).not.toContain('xref');
+    expect(xml).toContain('Figure 1');
+    expect(xml).toContain('See ');
+    expect(xml).toContain('for details.');
+  });
+
+  test('unwraps nested jats:xref', () => {
+    const tree = u('element', { name: 'jats:p', attributes: {} }, [
+      u('element', { name: 'jats:xref', attributes: {} }, [
+        u('element', { name: 'jats:xref', attributes: {} }, [u('text', 'inner')]),
+      ]),
+    ]) as Element;
+    const out = unwrapJatsXrefElements(tree);
+    expect(toXml(out)).toBe('<jats:p>inner</jats:p>');
   });
 });
