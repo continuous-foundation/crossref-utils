@@ -57,6 +57,7 @@ type DepositOptions = {
   journalAbbr?: string;
   journalDoi?: string;
   prefix?: string;
+  contributorType?: 'editor' | 'chair';
 };
 
 type DepositSource = {
@@ -369,7 +370,11 @@ function issueDataFromArticles(
       }
     }
     if (editors?.length && !proceedingsEditors) {
-      proceedingsEditors = contributorsXmlFromMystEditors(frontmatter);
+      const proceedingsEditorRole =
+        opts.type === 'conference' && opts.contributorType === 'chair' ? 'chair' : 'editor';
+      proceedingsEditors = contributorsXmlFromMystEditors(frontmatter, {
+        contributor_role: proceedingsEditorRole,
+      });
     }
   });
   if (!publicationDate && (volumeNumber || volumeDoi || issueNumber || issueDoi)) {
@@ -418,6 +423,11 @@ export async function deposit(session: ISession, opts: DepositOptions) {
   }
   if (!depositType) {
     throw new Error('No deposit type specified');
+  }
+  if (depositType !== 'conference' && opts.contributorType === 'chair') {
+    session.log.warn(
+      '`--contributor-type chair` only applies to conference deposits; using editor role for this deposit type.',
+    );
   }
   if (!name) {
     const resp = await inquirer.prompt([
@@ -661,6 +671,14 @@ function makeDepositCLI(program: Command) {
     .addOption(new Option('--registrant <value>', 'Registrant organization').default('Crossref'))
     .addOption(new Option('-o, --output <value>', 'Output file'))
     .addOption(new Option('--prefix <value>', 'Prefix for new DOIs'))
+    .addOption(
+      new Option(
+        '--contributor-type <value>',
+        'Contributor role for myst `editors` in conference proceedings (conference only; default editor)',
+      )
+        .choices(['editor', 'chair'])
+        .default('editor'),
+    )
     .action(clirun(deposit, { program, getSession: (logger) => new Session({ logger }) }));
   return command;
 }
