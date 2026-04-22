@@ -33,6 +33,7 @@ import {
   transformCiteToText,
   transformNewlineToSpace,
   transformXrefToLink,
+  unwrapJatsXrefElements,
 } from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
 import { selectNewDois } from './generate.js';
@@ -131,11 +132,13 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     transformNewlineToSpace(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
-    abstract = u(
-      'element',
-      { name: 'jats:abstract' },
-      jats.map((e) => element2JatsUnist(e)),
-    ) as Element;
+    abstract = unwrapJatsXrefElements(
+      u(
+        'element',
+        { name: 'jats:abstract' },
+        jats.map((e) => element2JatsUnist(e)),
+      ) as Element,
+    );
   } else if (description) {
     // Use the project description as the fallback for the abstract
     abstractPart = {
@@ -145,11 +148,13 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     transformNewlineToSpace(abstractPart);
     const serializer = new JatsSerializer(new VFile(), abstractPart as any);
     const jats = serializer.render(true).elements();
-    abstract = u(
-      'element',
-      { name: 'jats:abstract' },
-      jats.map((e) => element2JatsUnist(e)),
-    ) as Element;
+    abstract = unwrapJatsXrefElements(
+      u(
+        'element',
+        { name: 'jats:abstract' },
+        jats.map((e) => element2JatsUnist(e)),
+      ) as Element,
+    );
   }
   return { frontmatter: frontmatter ?? {}, dois, abstract, configFile };
 }
@@ -674,7 +679,7 @@ function makeDepositCLI(program: Command) {
     .addOption(
       new Option(
         '--contributor-type <value>',
-        'Contributor role for myst `editors` in conference proceedings (conference only; default editor)',
+        'Contributor role for myst `editors` in conference proceedings',
       )
         .choices(['editor', 'chair'])
         .default('editor'),
