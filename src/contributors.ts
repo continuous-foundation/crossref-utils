@@ -70,7 +70,11 @@ export function contributorsXmlFromMystAuthors(
   );
 }
 
-export function contributorsXmlFromMystEditors(myst: PageFrontmatter): Element | undefined {
+export function contributorsXmlFromMystEditors(
+  myst: PageFrontmatter,
+  opts?: { contributor_role?: ContributorOptions['contributor_role'] },
+): Element | undefined {
+  const contributor_role = opts?.contributor_role ?? 'editor';
   const editors =
     myst.editors
       ?.map((editor) => myst.contributors?.find(({ id }) => editor === id))
@@ -88,7 +92,7 @@ export function contributorsXmlFromMystEditors(myst: PageFrontmatter): Element |
       contributorXml({
         ...(editor as ContributorOptions),
         sequence: index === 0 ? 'first' : 'additional',
-        contributor_role: 'editor',
+        contributor_role,
       }),
     ),
   );
