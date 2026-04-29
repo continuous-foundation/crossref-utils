@@ -112,7 +112,6 @@ To validate an existing deposit XML file against the schema:
 crossref validate <deposit>.xml
 ```
 
-
 ---
 
 This package is [ESM only](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c).
@@ -122,6 +121,6 @@ This package is [ESM only](https://gist.github.com/sindresorhus/a39789f98801d908
 <p style="text-align: center; color: #aaa; padding-top: 50px">
   Made with love by
   <a href="https://continuous.foundation" target="_blank" style="color: #aaa">
-    Continuous Science Foundation <img src="https://continuous.foundation/images/logo-small.svg" style="height: 1em" />
+    Continuous Science Foundation <img src="https://cdn.curvenote.com/static/site/csf/icon.svg" style="height: 1em" />
   </a>
 </p>
