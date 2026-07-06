@@ -17,18 +17,30 @@ type JatsElement = {
 
 type Node = { type: string; value?: string; children?: Node[] };
 
+function jatsElementName(name: string): string {
+  // myst-to-jats already namespaces MathML elements (e.g. mml:math)
+  return name.includes(':') ? name : `jats:${name}`;
+}
+
 export function element2JatsUnist(element: JatsElement): Node {
   if (element.type === 'text' && element.text) {
     return u('text', element.text);
   }
-  if (element.name && element.elements) {
-    return u(
-      'element',
-      { name: `jats:${element.name}`, attributes: element.attributes },
-      element.elements.map((e) => element2JatsUnist(e)),
-    );
+  if (element.type === 'cdata' && element.cdata !== undefined) {
+    return u('cdata', element.cdata);
   }
-  throw new Error(`Invalid Jats element: ${element}`);
+  if (element.name) {
+    const props = { name: jatsElementName(element.name), attributes: element.attributes };
+    if (element.elements) {
+      return u(
+        'element',
+        props,
+        element.elements.map((e) => element2JatsUnist(e)),
+      );
+    }
+    return u('element', props);
+  }
+  throw new Error(`Invalid Jats element: ${JSON.stringify(element, null, 2)}`);
 }
 
 /**
