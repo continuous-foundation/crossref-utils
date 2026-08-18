@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { u } from 'unist-builder';
 import { selectAll } from 'unist-util-select';
 import { liftChildren, type GenericNode, type GenericParent } from 'myst-common';
+import type { Element, ElementContent } from 'xast';
 
 type JatsAttributes = Record<string, string | undefined>;
 
@@ -16,18 +17,53 @@ type JatsElement = {
 
 type Node = { type: string; value?: string; children?: Node[] };
 
+function jatsElementName(name: string): string {
+  // myst-to-jats already namespaces MathML elements (e.g. mml:math)
+  return name.includes(':') ? name : `jats:${name}`;
+}
+
 export function element2JatsUnist(element: JatsElement): Node {
   if (element.type === 'text' && element.text) {
     return u('text', element.text);
   }
-  if (element.name && element.elements) {
-    return u(
-      'element',
-      { name: `jats:${element.name}`, attributes: element.attributes },
-      element.elements.map((e) => element2JatsUnist(e)),
-    );
+  if (element.type === 'cdata' && element.cdata !== undefined) {
+    return u('cdata', element.cdata);
   }
-  throw new Error(`Invalid Jats element: ${element}`);
+  if (element.name) {
+    const props = { name: jatsElementName(element.name), attributes: element.attributes };
+    if (element.elements) {
+      return u(
+        'element',
+        props,
+        element.elements.map((e) => element2JatsUnist(e)),
+      );
+    }
+    return u('element', props);
+  }
+  throw new Error(`Invalid Jats element: ${JSON.stringify(element, null, 2)}`);
+}
+
+/**
+ * Remove `jats:xref` wrappers from a JATS xast subtree, keeping only their children.
+ */
+export function unwrapJatsXrefElements(node: Element): Element {
+  const children = node.children ?? [];
+  const newChildren: ElementContent[] = [];
+  for (const child of children) {
+    if (child.type === 'element') {
+      const processed = unwrapJatsXrefElements(child);
+      if (processed.name === 'jats:xref') {
+        for (const inner of processed.children) {
+          newChildren.push(inner.type === 'element' ? unwrapJatsXrefElements(inner) : inner);
+        }
+      } else {
+        newChildren.push(processed);
+      }
+    } else {
+      newChildren.push(child);
+    }
+  }
+  return { ...node, children: newChildren };
 }
 
 /**
