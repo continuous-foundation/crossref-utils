@@ -17,14 +17,24 @@ npm install -g crossref-utils
 To create a deposit, from within a [MyST](https://github.com/jupyter-book/mystmd) project, run:
 
 ```
-crossref deposit --type <type> -o <output>.xml
+crossref deposit --type <type> -o <output>.xml [paths...]
 ```
+
+The optional `paths` arguments say what to deposit; each one may be:
+
+- a MyST content file, e.g. `papers/smith/article.md` - deposited as a single article, using the metadata of the page and its containing project
+- a `myst.yml`/`curvenote.yml` file or the folder containing one, e.g. `papers/smith` - deposited as a single article, using the project metadata, with the abstract and citations collected from the project pages
+- a folder of MyST projects, e.g. `papers` - deposited as one article per project found in it (its subfolders, and their subfolders)
+
+Since folders of projects are expanded, `crossref deposit papers essays` and `crossref deposit papers/* essays/*` are equivalent; patterns are expanded by your shell, so do not quote them. Paths may be mixed and are deduplicated, so `crossref deposit myst.yml papers/*` deposits the project in the current folder alongside each project in `papers`.
+
+If no paths are given, the CLI falls back to discovery: if there is a project in the current folder, the CLI prompts for a file from that project; otherwise, every project in the current folder's subfolders (up to two levels deep) is deposited. Note that discovery has no concept of which projects are articles - if the repository contains MyST projects that are not articles, list the article paths explicitly instead.
 
 This will prompt the user to select new DOIs, if they are not present in MyST metadata. Available options are:
 
 - `--type`: Currently available types are `journal`, `preprint`, `conference`, and `dataset`. Each type is discussed in more detail below.
 - `-o, --output`: Output xml file. If this is not provided, the xml will be printed to stdout.
-- `--file`: Specific file to use for the deposit; this may be a single article or a `myst.yml` file. If not specified, the CLI will prompt the user.
+- `--file`: **Deprecated** - pass the file as an argument instead. May not be combined with path arguments.
 - `--prefix`: DOI prefix to use for new, generated DOIs. Default is Curvenote's prefix.
 - `--name`, `--email`: Depositor name and email. Default Depositor is Curvenote.
 - `--registrant`: Registrant organization. Default is `Crossref` - likely this should not be changed.
@@ -52,7 +62,7 @@ Different deposit types have different required fields. If DOIs are not provided
 
 #### Journal
 
-This type is used to register a new journal and/or new journal articles. If `--file` is set to `myst.yml`, this deposit type will attempt to discover multiple articles in the MyST project.
+This type is used to register a new journal and/or new journal articles. Multiple articles may be deposited at once, for example `crossref deposit --type journal papers/*`.
 
 In addition to the above article metadata for each article, this deposit type requires journal title and DOI, set under `venue` frontmatter in `myst.yml`:
 
@@ -68,7 +78,7 @@ You may also specify in the frontmatter:
 
 #### Conference
 
-This type is used to register a conference proceedings. Similar to "journal" deposits, this will attempt to discover multiple articles.
+This type is used to register a conference proceedings. Similar to "journal" deposits, multiple articles may be deposited at once.
 
 In addition to the above article metadata for each article, this deposit type requires conference title, proceedings title, and proceedings publisher, set in `myst.yml`:
 

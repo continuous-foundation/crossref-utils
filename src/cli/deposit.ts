@@ -159,25 +159,136 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   return { frontmatter: frontmatter ?? {}, dois, abstract, configFile };
 }
 
+const CONFIG_FILES = ['myst.yml', 'curvenote.yml'];
+const VALID_DEPOSIT_EXTENSIONS = ['.md', '.ipynb', '.tex', '.myst.json'];
+
+function isDirectory(item: string) {
+  return fs.existsSync(item) && fs.lstatSync(item).isDirectory();
+}
+
+/** Return true if the file is a MyST config or a MyST content file */
+function isDepositFile(file: string) {
+  const lower = file.toLowerCase();
+  if (CONFIG_FILES.includes(path.basename(lower))) return true;
+  return VALID_DEPOSIT_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+/**
+ * Return a deposit source for the MyST project defined in the given folder
+ *
+ * Returns undefined if the folder does not have a loadable MyST config.
+ */
+async function depositSourceFromFolder(
+  session: ISession,
+  folder: string,
+): Promise<DepositSource | undefined> {
+  const config = await loadConfig(session, folder);
+  if (!config) return;
+  const depositFile = selectors.selectLocalConfigFile(session.store.getState(), folder);
+  if (!depositFile) return;
+  return { projectPath: folder, depositFile };
+}
+
+/**
+ * Return deposit sources for all MyST projects in the given folder, up to two levels deep
+ *
+ * If the folder itself is a MyST project, that project is the only source; otherwise, each
+ * child folder is a source if it is a project, or is itself descended into.
+ */
+async function depositSourcesFromFolder(
+  session: ISession,
+  folder: string,
+): Promise<DepositSource[]> {
+  const source = await depositSourceFromFolder(session, folder);
+  if (source) return [source];
+  const subdirs = fs
+    .readdirSync(folder)
+    .map((item) => path.join(folder, item))
+    .filter(isDirectory)
+    .map((dir) => {
+      const files = fs.readdirSync(dir);
+      if (files.some((file) => CONFIG_FILES.includes(file))) return dir;
+      return files.map((item) => path.join(dir, item)).filter(isDirectory);
+    })
+    .flat();
+  const sources: DepositSource[] = [];
+  for (const dir of subdirs) {
+    const subdirSource = await depositSourceFromFolder(session, dir);
+    if (subdirSource) sources.push(subdirSource);
+  }
+  return sources;
+}
+
+/**
+ * Return deposit sources for an explicit file or folder path
+ *
+ * A file is deposited from its containing project; a folder is deposited as a project,
+ * or, if it is not a project, as all the projects it contains.
+ */
+async function depositSourcesFromPath(session: ISession, depositPath: string) {
+  const resolved = path.resolve(depositPath);
+  if (!fs.existsSync(resolved)) {
+    if (depositPath.match(/[*?[\]]/)) {
+      throw new Error(
+        `Deposit path not found: ${depositPath} - patterns must be expanded by your shell, do not quote them`,
+      );
+    }
+    throw new Error(`Deposit path not found: ${depositPath}`);
+  }
+  if (isDirectory(resolved)) {
+    const sources = await depositSourcesFromFolder(session, resolved);
+    if (sources.length === 0) {
+      throw new Error(`Unable to find MyST project in folder: ${depositPath}`);
+    }
+    return sources;
+  }
+  if (!isDepositFile(resolved)) {
+    throw new Error(
+      `Unable to deposit file: ${depositPath} - must be a MyST config or content file (${VALID_DEPOSIT_EXTENSIONS.join(', ')})`,
+    );
+  }
+  const projectPath = await findCurrentProjectAndLoad(session, resolved);
+  if (!projectPath) {
+    throw new Error(`Unable to determine project path from file: ${depositPath}`);
+  }
+  return [{ depositFile: resolved, projectPath }];
+}
+
 async function getDepositSources(
   session: ISession,
+  paths: string[],
   opts: DepositOptions,
 ): Promise<DepositSource[]> {
-  let depositFile: string;
-  let projectPath: string | undefined;
-  // If file is specified, find the containing project and use it as the only source
-  if (opts.file) {
-    depositFile = path.resolve(opts.file);
-    projectPath = await findCurrentProjectAndLoad(session, depositFile);
-    if (!projectPath) {
-      throw new Error(`Unable to determine project path from file: ${opts.file}`);
-    }
-    return [{ depositFile, projectPath }];
+  if (opts.file && paths.length > 0) {
+    throw new Error(
+      'Unable to use both --file and deposit path arguments; --file is deprecated, pass files and folders as arguments',
+    );
   }
-  // If file is not specified and there is a project on the current path, select a single source from there
+  if (opts.file) {
+    session.log.warn(
+      `--file is deprecated; pass files and folders as arguments, for example: crossref deposit ${opts.file}`,
+    );
+    paths = [opts.file];
+  }
+  // If paths are specified, each one is resolved to the project(s) it describes
+  if (paths.length > 0) {
+    const sources: DepositSource[] = [];
+    const depositFiles = new Set<string>();
+    for (const depositPath of paths) {
+      const pathSources = await depositSourcesFromPath(session, depositPath);
+      pathSources.forEach((source) => {
+        // The same project may be described by more than one path, e.g. `myst.yml .`
+        if (depositFiles.has(source.depositFile)) return;
+        depositFiles.add(source.depositFile);
+        sources.push(source);
+      });
+    }
+    return sources;
+  }
+  // If no paths are specified and there is a project on the current path, select a single source from there
   await session.reload();
   const state = session.store.getState();
-  projectPath = selectors.selectCurrentProjectPath(state);
+  const projectPath = selectors.selectCurrentProjectPath(state);
   const configFile = selectors.selectCurrentProjectFile(state);
   if (projectPath && configFile) {
     const project = await processProject(
@@ -200,35 +311,10 @@ async function getDepositSources(
         }),
       },
     ]);
-    depositFile = resp.depositFile;
-    return [{ projectPath, depositFile }];
+    return [{ projectPath, depositFile: resp.depositFile }];
   }
-  // If there is no project on the current path, load all projects in child folders (up to two levels deep)
-  const subdirs = fs
-    .readdirSync('.')
-    .map((item) => path.resolve(item))
-    .filter((item) => fs.lstatSync(item).isDirectory())
-    .map((dir) => {
-      const files = fs.readdirSync(dir);
-      if (files.includes('myst.yml') || files.includes('curvenote.yml')) return dir;
-      return files
-        .map((item) => path.join(dir, item))
-        .filter((item) => fs.lstatSync(item).isDirectory());
-    })
-    .flat();
-  const depositSources = (
-    await Promise.all(
-      subdirs.map(async (dir) => {
-        const config = await loadConfig(session, dir);
-        if (!config) return;
-        return {
-          projectPath: dir,
-          depositFile: selectors.selectLocalConfigFile(session.store.getState(), dir),
-        };
-      }),
-    )
-  ).filter((source): source is DepositSource => !!source);
-  return depositSources;
+  // If there is no project on the current path, load all projects in child folders
+  return depositSourcesFromFolder(session, path.resolve('.'));
 }
 
 function issueDataFromArticles(
@@ -408,7 +494,7 @@ function issueDataFromArticles(
   };
 }
 
-export async function deposit(session: ISession, opts: DepositOptions) {
+export async function deposit(session: ISession, paths: string[], opts: DepositOptions) {
   let { type: depositType, name, email, registrant, prefix } = opts;
   if (!depositType) {
     const resp = await inquirer.prompt([
@@ -466,7 +552,7 @@ export async function deposit(session: ISession, opts: DepositOptions) {
     registrant = resp.registrant;
   }
   if (!prefix) prefix = 'curvenote';
-  const depositSources = await getDepositSources(session, opts);
+  const depositSources = await getDepositSources(session, paths, opts);
   const depositArticles = (
     await Promise.all(depositSources.map((source) => depositArticleFromSource(session, source)))
   ).sort((a, b) => Number(a.frontmatter.first_page) - Number(b.frontmatter.first_page));
@@ -664,7 +750,11 @@ export async function deposit(session: ISession, opts: DepositOptions) {
 function makeDepositCLI(program: Command) {
   const command = new Command('deposit')
     .description('Create Crossref deposit XML from local MyST content')
-    .addOption(new Option('--file <value>', 'File to deposit'))
+    .argument(
+      '[paths...]',
+      'Files and/or folders to deposit; folders may contain the MyST project or its subfolders may. If not specified, projects are discovered from the current folder.',
+    )
+    .addOption(new Option('--file <value>', 'File to deposit (deprecated, pass as an argument)'))
     .addOption(
       new Option('--type <value>', 'Deposit type')
         .choices(['conference', 'journal', 'preprint', 'dataset'])
