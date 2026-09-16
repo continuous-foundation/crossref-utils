@@ -4,14 +4,31 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/continuous-foundation/crossref-utils/blob/main/LICENSE)
 [![CI](https://github.com/continuous-foundation/crossref-utils/workflows/CI/badge.svg)](https://github.com/continuous-foundation/crossref-utils/actions)
 
-Utilities for creating crossref.org deposit metadata from node or the command line.
+Utilities for creating crossref.org deposit metadata from Node or the command line.
 
+This repository is a monorepo:
+
+| Package | Role |
+|---------|------|
+| [`crossref-utils`](./packages/crossref-utils) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
+| [`crossref-cli`](./packages/crossref-cli) | `crossref` CLI (filesystem, myst-cli, prompts) |
+
+Library API details: [`SDK.md`](./SDK.md). Implementation notes: [`plan-sdk.md`](./plan-sdk.md).  
 CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](./docs/e2e-fixtures.md).
 
-To use from the command line, use the `-g` to create a global install.
+```bash
+# Library (serverless / headless)
+npm install crossref-utils
+
+# CLI
+npm install -g crossref-cli
+# (during transition, `crossref` bin ships from crossref-cli)
+```
+
+To use from the command line after a global install:
 
 ```
-npm install -g crossref-utils
+npm install -g crossref-cli
 ```
 
 ## Creating a deposit

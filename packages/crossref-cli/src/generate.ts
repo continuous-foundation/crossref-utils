@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import type { ISession } from 'myst-cli-utils';
 import { clirun, getSession } from 'myst-cli-utils';
-import { generateDoi } from '../utils.js';
+import { generateDoi, suggestDois } from 'crossref-utils';
 import { plural } from 'myst-common';
 
+/** Caller/org config — not part of crossref-utils library. */
 const PREFIX: Record<string, string> = {
   curvenote: '10.62329',
   msa: '10.69761',
@@ -12,7 +13,12 @@ const PREFIX: Record<string, string> = {
   physiome: '10.36903',
 };
 
+function resolvePrefix(prefix: string) {
+  return PREFIX[prefix] || prefix;
+}
+
 export async function selectNewDois(count: number, prefix: string) {
+  const numericPrefix = resolvePrefix(prefix);
   const dois: string[] = [];
   while (dois.length < count) {
     const resp = await inquirer.prompt([
@@ -20,7 +26,7 @@ export async function selectNewDois(count: number, prefix: string) {
         name: 'dois',
         message: `Select ${plural('%s DOI(s)', count - dois.length)}`,
         type: 'checkbox',
-        choices: [...Array(count * 2)].map(() => generateDoi(PREFIX[prefix] || prefix)),
+        choices: suggestDois(count * 2, numericPrefix),
       },
     ]);
     dois.push(...resp.dois);
@@ -29,7 +35,7 @@ export async function selectNewDois(count: number, prefix: string) {
 }
 
 export async function generate(session: ISession, prefix: string) {
-  const doi = generateDoi(PREFIX[prefix] || prefix);
+  const doi = generateDoi(resolvePrefix(prefix));
   session.log.info(doi);
 }
 

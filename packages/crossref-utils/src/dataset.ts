@@ -1,7 +1,7 @@
 import type { Element } from 'xast';
-import { curvenoteDoiData, e } from './utils.js';
-import type { DatabaseOptions, DatasetMetadata, Titles } from './types.js';
 import type { PageFrontmatter } from 'myst-frontmatter';
+import { e } from './utils.js';
+import type { DatabaseOptions, DatasetMetadata, DoiData, Titles } from './types.js';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { dateXml } from './dates.js';
 
@@ -111,12 +111,15 @@ export function datasetFromMyst(
   myst: PageFrontmatter,
   citations?: Record<string, string>,
   abstract?: string | Element[],
-  doiResolution: (myst: PageFrontmatter) => { doi: string; resource: string } | undefined = ({
-    doi,
-  }) => curvenoteDoiData(doi as string),
+  doiResolution?: (myst: PageFrontmatter) => DoiData | undefined,
 ) {
   const { title, subtitle, date, venue } = myst;
   if (!title) throw new Error('Must have a title');
+  if (!doiResolution) {
+    throw new Error(
+      'datasetFromMyst requires a doiResolution callback that returns { doi, resource }.',
+    );
+  }
   const contributors = contributorsXmlFromMystAuthors(myst);
   const datasetOpts: DatasetMetadata = {
     contributors,

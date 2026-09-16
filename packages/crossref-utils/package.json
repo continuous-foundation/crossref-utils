@@ -1,0 +1,74 @@
+{
+  "name": "crossref-utils",
+  "version": "0.0.3",
+  "license": "MIT",
+  "description": "In-memory utilities for creating and validating Crossref deposit metadata",
+  "author": "Rowan Cockett <rowan@continuousfoundation.org>",
+  "homepage": "https://github.com/continuous-foundation/crossref-utils",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "CrossRef",
+    "DOI"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/continuous-foundation/crossref-utils.git",
+    "directory": "packages/crossref-utils"
+  },
+  "scripts": {
+    "copy:version": "echo \"const version = '\"$npm_package_version\"';\nexport default version;\" > src/version.ts",
+    "clean": "rimraf dist",
+    "test": "npm run copy:version && vitest run && npm run test:e2e",
+    "test:unit": "npm run copy:version && vitest run",
+    "test:e2e": "npm run build -w crossref-cli && vitest run --config vitest.e2e.config.ts",
+    "test:e2e:record": "npm run build -w crossref-cli && RECORD_GOLDEN=1 vitest run --config vitest.e2e.config.ts",
+    "test:watch": "npm run copy:version && vitest watch",
+    "lint": "eslint \"src/**/*.ts*\" -c ../../.eslintrc.cjs",
+    "build:esm": "tsc --project ./tsconfig.json",
+    "build": "npm-run-all -l clean copy:version build:esm"
+  },
+  "bugs": {
+    "url": "https://github.com/continuous-foundation/crossref-utils/issues"
+  },
+  "dependencies": {
+    "@types/xast": "^2.0.4",
+    "adm-zip": "^0.5.10",
+    "chalk": "^5.3.0",
+    "css-selector-parser": "^3.0.5",
+    "doi-utils": "^2.0.5",
+    "myst-cli-utils": "^2.0.11",
+    "myst-common": "^1.7.10",
+    "myst-frontmatter": "^1.7.10",
+    "myst-to-jats": "^1.0.33",
+    "nanoid": "^5.0.5",
+    "node-fetch": "^3.3.2",
+    "unist-builder": "^4.0.0",
+    "unist-util-select": "^5.1.0",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^5.0.0",
+    "which": "^4.0.0",
+    "xast-util-from-xml": "^4.0.0",
+    "xast-util-to-xml": "^4.0.0",
+    "xerces-wasm": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
+    "@types/node": "^20.11.13",
+    "@types/which": "^3.0.3"
+  }
+}

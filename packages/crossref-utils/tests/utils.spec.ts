@@ -1,8 +1,14 @@
 import { describe, test, expect } from 'vitest';
 import { u } from 'unist-builder';
 import { toXml } from 'xast-util-to-xml';
-import { publicationDateXml } from '../src';
-import { element2JatsUnist, unwrapJatsXrefElements } from '../src/cli/utils.js';
+import {
+  publicationDateXml,
+  abstractFromMdast,
+  element2JatsUnist,
+  unwrapJatsXrefElements,
+  generateDoi,
+  suggestDois,
+} from '../src';
 import type { Element } from 'xast';
 
 describe('CrossRef Utilities', () => {
@@ -29,6 +35,32 @@ describe('CrossRef Utilities', () => {
     } else {
       expect(toXml(publicationDateXml(date) as Element)).toBe(xml);
     }
+  });
+});
+
+
+describe('DOI helpers', () => {
+  test('generateDoi uses provided prefix', () => {
+    const doi = generateDoi('10.1234');
+    expect(doi.startsWith('10.1234/')).toBe(true);
+    expect(doi.length).toBeGreaterThan('10.1234/'.length);
+  });
+
+  test('suggestDois returns requested count', () => {
+    const dois = suggestDois(3, '10.1234');
+    expect(dois).toHaveLength(3);
+    expect(new Set(dois).size).toBe(3);
+  });
+});
+
+describe('abstractFromMdast', () => {
+  test('wraps paragraph mdast as jats:abstract', () => {
+    const abstract = abstractFromMdast({
+      type: 'root',
+      children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Hello abstract' }] }],
+    });
+    expect(abstract.name).toBe('jats:abstract');
+    expect(toXml(abstract)).toContain('Hello abstract');
   });
 });
 

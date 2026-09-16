@@ -20,29 +20,34 @@ import type { ISession } from 'myst-cli';
 import { clirun } from 'myst-cli-utils';
 import type { GenericParent } from 'myst-common';
 import { extractPart, plural, toText } from 'myst-common';
-import { JatsSerializer } from 'myst-to-jats';
-import { VFile } from 'vfile';
-import { u } from 'unist-builder';
 import type { Element } from 'xast';
-import { DoiBatch } from '../batch.js';
-import { journalArticleFromMyst, journalXml } from '../journal.js';
-import { preprintFromMyst } from '../preprint.js';
-import {
-  addDoiToConfig,
-  element2JatsUnist,
-  transformCiteToText,
-  transformNewlineToSpace,
-  transformXrefToLink,
-  unwrapJatsXrefElements,
-} from './utils.js';
 import type { ProjectFrontmatter } from 'myst-frontmatter';
-import { selectNewDois } from './generate.js';
-import type { ConferenceOptions, DatabaseOptions, JournalIssue } from '../types.js';
-import { curvenoteDoiData } from '../utils.js';
-import { conferencePaperFromMyst, conferenceXml } from '../conference.js';
-import { contributorsXmlFromMystEditors } from '../contributors.js';
-import { databaseXml, datasetFromMyst } from '../dataset.js';
 import { normalize } from 'doi-utils';
+import {
+  DoiBatch,
+  journalArticleFromMyst,
+  journalXml,
+  preprintFromMyst,
+  conferencePaperFromMyst,
+  conferenceXml,
+  contributorsXmlFromMystEditors,
+  databaseXml,
+  datasetFromMyst,
+  abstractFromMdast,
+  type ConferenceOptions,
+  type DatabaseOptions,
+  type DoiData,
+  type JournalIssue,
+} from 'crossref-utils';
+import { addDoiToConfig } from './utils.js';
+import { selectNewDois } from './generate.js';
+
+/** CLI default landing-page resolver (org-specific; not in crossref-utils). */
+function curvenoteDoiData(doi: string): DoiData {
+  return { doi, resource: `https://doi.curvenote.com/${doi}` };
+}
+
+const resolveCurvenoteDoi = (doi: string) => curvenoteDoiData(doi);
 
 type DepositType = 'conference' | 'journal' | 'preprint' | 'dataset';
 
@@ -127,34 +132,13 @@ export async function depositArticleFromSource(session: ISession, depositSource:
   let abstract: Element | undefined;
   const description = (frontmatter?.description || projectFrontmatter?.description)?.trim();
   if (abstractPart) {
-    transformXrefToLink(abstractPart);
-    transformCiteToText(abstractPart);
-    transformNewlineToSpace(abstractPart);
-    const serializer = new JatsSerializer(new VFile(), abstractPart as any);
-    const jats = serializer.render(true).elements();
-    abstract = unwrapJatsXrefElements(
-      u(
-        'element',
-        { name: 'jats:abstract' },
-        jats.map((e) => element2JatsUnist(e)),
-      ) as Element,
-    );
+    abstract = abstractFromMdast(abstractPart);
   } else if (description) {
     // Use the project description as the fallback for the abstract
-    abstractPart = {
+    abstract = abstractFromMdast({
       type: 'root',
       children: [{ type: 'paragraph', children: [{ type: 'text', value: description }] }],
-    };
-    transformNewlineToSpace(abstractPart);
-    const serializer = new JatsSerializer(new VFile(), abstractPart as any);
-    const jats = serializer.render(true).elements();
-    abstract = unwrapJatsXrefElements(
-      u(
-        'element',
-        { name: 'jats:abstract' },
-        jats.map((e) => element2JatsUnist(e)),
-      ) as Element,
-    );
+    });
   }
   return { frontmatter: frontmatter ?? {}, dois, abstract, configFile };
 }
@@ -637,7 +621,9 @@ export async function deposit(session: ISession, paths: string[], opts: DepositO
       },
       journalIssue,
       depositArticles.map(({ frontmatter, dois, abstract }) => {
-        return journalArticleFromMyst(session, frontmatter, dois, abstract);
+        return journalArticleFromMyst(session.log, frontmatter, dois, abstract, {
+          resolveDoiData: resolveCurvenoteDoi,
+        });
       }),
     );
   } else if (depositType === 'conference') {
@@ -699,7 +685,9 @@ export async function deposit(session: ISession, paths: string[], opts: DepositO
       series,
       proceedings,
       conference_papers: depositArticles.map(({ frontmatter, dois, abstract }) => {
-        return conferencePaperFromMyst(frontmatter, dois, abstract);
+        return conferencePaperFromMyst(frontmatter, dois, abstract, {
+          resolveDoiData: resolveCurvenoteDoi,
+        });
       }),
     });
   } else if (depositType === 'dataset') {
@@ -734,7 +722,9 @@ export async function deposit(session: ISession, paths: string[], opts: DepositO
       throw new Error('preprint deposit may only use a single article');
     }
     const { frontmatter, dois, abstract } = depositArticles[0];
-    body = preprintFromMyst(session, frontmatter, dois, abstract);
+    body = preprintFromMyst(session.log, frontmatter, dois, abstract, {
+      resolveDoiData: resolveCurvenoteDoi,
+    });
   }
   const batch = new DoiBatch(
     { id: opts.id ?? uuid(), depositor: { name, email }, registrant },

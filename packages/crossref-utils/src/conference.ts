@@ -1,9 +1,12 @@
 import type { Element } from 'xast';
+import { normalize } from 'doi-utils';
+import type { PageFrontmatter } from 'myst-frontmatter';
 import { e } from './utils.js';
 import type { ConferenceOptions, ConferencePaper } from './types.js';
-import type { PageFrontmatter } from 'myst-frontmatter';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { publicationDateXml } from './dates.js';
+import type { DoiDataResolver } from './doi.js';
+import { resolveDoiData } from './doi.js';
 
 /**
  * Create conference paper xml
@@ -95,6 +98,7 @@ export function conferencePaperFromMyst(
   myst: PageFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
+  opts?: { resolveDoiData?: DoiDataResolver },
 ) {
   const { title, subtitle, first_page, last_page, license, doi, date } = myst;
   const contributors = contributorsXmlFromMystAuthors(myst);
@@ -110,8 +114,9 @@ export function conferencePaperFromMyst(
     // Only put in CC licenses at this time
     paperOpts.license = license.content.url;
   }
-  if (doi) {
-    paperOpts.doi_data = { doi, resource: `https://doi.curvenote.com/${doi}` };
+  const normalizedDoi = normalize(doi);
+  if (normalizedDoi) {
+    paperOpts.doi_data = resolveDoiData(normalizedDoi, opts?.resolveDoiData);
   }
   if (first_page) {
     paperOpts.pages = { first_page: String(first_page) };

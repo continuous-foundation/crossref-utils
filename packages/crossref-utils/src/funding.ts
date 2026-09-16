@@ -1,10 +1,10 @@
 import type { Award, ProjectFrontmatter } from 'myst-frontmatter';
 import type { Fundref } from './types.js';
-import type { ISession } from 'myst-cli-utils';
+import type { Logger } from './logger.js';
 import { e, t } from './utils.js';
 
 export function fundrefFromMyst(
-  session: ISession,
+  logger: Logger,
   frontmatter: ProjectFrontmatter,
 ): Fundref[] | undefined {
   const { funding, affiliations } = frontmatter;
@@ -16,7 +16,7 @@ export function fundrefFromMyst(
       if (!award) return false;
       const sources = award?.sources ?? [];
       if (sources.length === 0) {
-        session.log.warn(`To be included in CrossRef, awards must have a source.`);
+        logger.warn(`To be included in CrossRef, awards must have a source.`);
         return false;
       }
       return true;
