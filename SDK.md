@@ -115,11 +115,11 @@ type ValidationResult = {
 };
 ```
 
-Validates deposit XML **in process** against Crossref schema **5.3.1** (bundled assets; no `xmllint`, no temp-file requirement for the happy path). Usable from serverless.
+Validates deposit XML **in process** against Crossref schema **5.3.1** using **xerces-wasm** (no `xmllint`). Schemas are downloaded once into a local cache on first use.
+
+**Runtimes:** xerces-wasm runs on **Node ≥ 18** and can run in the **browser**; our wrapper is **Node / Node-serverless first** (uses filesystem + cache). See [`docs/validation.md`](./docs/validation.md) for the full write-up (Vercel caveats, WASM bundling, schema includes).
 
 Independent of builders — validate XML from `DoiBatch.toXml()` or any other source.
-
-If a pure-JS XSD engine cannot be maintained, the API still exists with a documented backend (e.g. external service); library callers should not depend on shelling to `xmllint`.
 
 ---
 

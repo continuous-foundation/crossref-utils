@@ -13,7 +13,7 @@ This repository is a monorepo:
 | [`crossref-utils`](./packages/crossref-utils) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
 | [`crossref-cli`](./packages/crossref-cli) | `crossref` CLI (filesystem, myst-cli, prompts) |
 
-Library API details: [`SDK.md`](./SDK.md). Implementation notes: [`plan-sdk.md`](./plan-sdk.md).  
+Library API details: [`SDK.md`](./SDK.md). Implementation notes: [`plan-sdk.md`](./plan-sdk.md). Validation / xerces-wasm: [`docs/validation.md`](./docs/validation.md).  
 CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](./docs/e2e-fixtures.md).
 
 ```bash
