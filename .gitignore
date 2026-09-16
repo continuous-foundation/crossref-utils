@@ -34,7 +34,6 @@ yarn-error.log*
 _build
 
 **/src/version.ts
-**/schemas-cache/
 **/tests/fixtures/.tmp-deposit.xml
 
 .yalc

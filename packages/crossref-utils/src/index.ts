@@ -11,8 +11,8 @@ export * from './funding.js';
 export * from './abstract.js';
 export * from './doi.js';
 export * from './logger.js';
-export { validateDeposit, ensureSchemas } from './validate.js';
-export type { ValidationResult, ValidationIssue } from './validate.js';
+export { validateDeposit, schemaVersionFromXml } from './validate.js';
+export type { ValidationResult, ValidationIssue, DepositSchema } from './validate.js';
 export { e, t } from './utils.js';
 export { default as version } from './version.js';
 

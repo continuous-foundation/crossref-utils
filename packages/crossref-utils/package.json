@@ -15,8 +15,7 @@
   },
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "schemas"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
@@ -47,8 +46,6 @@
   },
   "dependencies": {
     "@types/xast": "^2.0.4",
-    "adm-zip": "^0.5.10",
-    "chalk": "^5.3.0",
     "css-selector-parser": "^3.0.5",
     "doi-utils": "^2.0.5",
     "myst-cli-utils": "^2.0.11",
@@ -56,19 +53,15 @@
     "myst-frontmatter": "^1.7.10",
     "myst-to-jats": "^1.0.33",
     "nanoid": "^5.0.5",
-    "node-fetch": "^3.3.2",
     "unist-builder": "^4.0.0",
     "unist-util-select": "^5.1.0",
     "unist-util-visit": "^5.0.0",
     "vfile": "^5.0.0",
-    "which": "^4.0.0",
     "xast-util-from-xml": "^4.0.0",
     "xast-util-to-xml": "^4.0.0",
     "xerces-wasm": "^2.0.1"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5.5",
-    "@types/node": "^20.11.13",
-    "@types/which": "^3.0.3"
+    "@types/node": "^20.11.13"
   }
 }

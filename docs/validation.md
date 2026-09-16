@@ -1,46 +1,51 @@
 # Deposit XML validation
 
-`crossref-utils` exposes **`validateDeposit(xml: string)`** for in-process Crossref XSD checks (no `xmllint`, no shelling out).
+## Responsibility split
 
-## How it works
+| Layer | Role |
+|-------|------|
+| **`crossref-utils` (SDK)** | `validateDeposit(xml, schema)` — in-process XSD check via xerces-wasm. **No network, no schema download.** Caller must pass schema text / bundle. |
+| **`crossref-cli` (or your app)** | Obtain schemas (download, vendor, or cache), pick version, pass a `DepositSchema` into the SDK. |
 
-1. **Well-formedness** — parse with `xast-util-from-xml`. Malformed XML fails fast (no schema download).
-2. **Schema load** — resolve Crossref schema version from the XML `xmlns` (default **5.3.1**), then `ensureSchemas()` downloads the Crossref schema zip from GitLab once into a local `schemas-cache/` (gitignored).
-3. **XSD validate** — run the deposit XML against the cached XSD via **[xerces-wasm](https://www.npmjs.com/package/xerces-wasm)** (Apache Xerces-C++ compiled to WebAssembly).
+That lets the CLI keep **multi-version** support (resolve version from deposit `xmlns`, load matching files from a cached Crossref `schemas/` tree), while another app can **vendor a single bundle** (e.g. 5.5.0) for the XML it produces.
 
-Return shape:
+## SDK API
 
 ```ts
-{ ok: boolean; errors: { message: string; line?: number; column?: number }[] }
+import { validateDeposit, schemaVersionFromXml, type DepositSchema } from 'crossref-utils';
+
+// Prefer a bundle so includes/imports resolve (common*.xsd, fundref, JATS, …)
+const schema: DepositSchema = {
+  entry: crossrefXsdText,           // e.g. contents of crossref5.3.1.xsd
+  imports: { 'common5.3.1.xsd': commonText, 'fundref.xsd': fundrefText, /* … */ },
+};
+
+const { ok, errors } = await validateDeposit(xml, schema);
 ```
 
-The CLI `crossref validate <file>` reads the file and calls the same API.
+`schemaVersionFromXml(xml)` reads `xmlns="http://www.crossref.org/schema/X.Y.Z"` (default `5.3.1`) so hosts can choose which bundle to load.
+
+A bare `string` entry is accepted but is usually **incomplete** for full Crossref validation (the main XSD includes/imports many files).
+
+## CLI behavior
+
+`crossref validate <file>`:
+
+1. Reads the deposit XML  
+2. Downloads the Crossref GitLab `schemas/` zip **once** into `~/.cache/crossref-cli/schemas/` (if missing)  
+3. Builds a `DepositSchema` bundle for the XML’s schema version  
+4. Calls `validateDeposit(xml, schema)`
 
 ## Why xerces-wasm?
 
-Earlier tooling fell back to **`xmllint`** (native CLI, awkward in CI/serverless). Pure-JS XSD options are sparse or unmaintained. **xerces-wasm** gives real XSD 1.0 validation without Node native addons (`node-gyp`), using a WASM binary instead.
+Real XSD 1.0 validation without native `node-gyp` addons or shelling to `xmllint`. See [xerces-wasm](https://www.npmjs.com/package/xerces-wasm) (`engines.node: >=18`). WASM runs on **Node** and can run in the **browser**; our SDK API is environment-agnostic as long as you pass schema text in memory.
 
-Dependency: `xerces-wasm@^2` (`engines.node: >=18`).
+### Serverless (e.g. Vercel)
 
-## Runtime support: Node, serverless, browser?
+- Pass a **vendored** `DepositSchema` (no GitLab download in the function).  
+- Ensure `xerces-wasm`’s `.wasm` asset is included in the function bundle.  
+- Cold start: first WASM + XSD compile is heavier; warm isolates help.
 
-| Environment | xerces-wasm itself | Our `validateDeposit` today |
-|-------------|--------------------|-----------------------------|
-| **Node.js ≥ 18** | Supported (primary target; ships `main` + `.wasm`) | Supported |
-| **Vercel / other Node serverless** | Generally yes — WASM runs in Node serverless if the `.wasm` asset is available to the function | **Mostly yes for the engine**, but see caveats below |
-| **Browser** | Possible (project has a [browser playground](https://harshanacz.github.io/xerces-playground/)) | **Not supported as-is** — our wrapper uses `node:fs`, `node-fetch`, and a disk cache |
+## Crossref schema versions
 
-**Short answer:** xerces-wasm is **not browser-only**. It is a **WASM build of Xerces** meant for **Node and the browser**. Our library API is **Node-first** (and intended for serverless Node such as Vercel functions).
-
-### Vercel / serverless caveats
-
-- **Bundle the WASM file** — ensure `node_modules/xerces-wasm/wasm/*.wasm` is included in the function output (Vercel usually includes `node_modules`; watch file-size limits).
-- **Schema cache + network** — first call may download schemas to disk. On read-only or ephemeral filesystems, prefer **vendoring Crossref XSD files** into the package (or an immutable cache) so cold starts do not depend on GitLab.
-- **Cold start** — first WASM module init + XSD compile is heavier than subsequent validates; `createProjectValidator` (xerces API) can cache a grammar pool across requests in a warm isolate.
-- **Crossref multi-file XSDs** — the official schema `include`s other files. Passing only the main XSD text may miss imports; a follow-up should use xerces **schema bundles** / `validateFiles` with the full `schemas/` directory.
-
-## Limitations / follow-ups
-
-- Schemas are downloaded on demand, not yet shipped inside the npm tarball.
-- Full Crossref schema-set wiring (all includes) should be hardened before relying on this for production deposit gates.
-- Browser validation would need a separate entry that takes XSD text/bundles and does not touch the filesystem.
+Builders/`DoiBatch` currently emit **5.3.1**. Crossref’s current recommended deposit schema is **5.5.0** ([schema versions](https://www.crossref.org/documentation/schema-library/schema-versions/)). History and files: [gitlab.com/crossref/schema](https://gitlab.com/crossref/schema). Updates are irregular (roughly a few notable bumps per year recently).

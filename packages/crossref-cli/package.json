@@ -36,6 +36,7 @@
     "url": "https://github.com/continuous-foundation/crossref-utils/issues"
   },
   "dependencies": {
+    "adm-zip": "^0.5.10",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "crossref-utils": "0.0.3",
@@ -47,11 +48,13 @@
     "myst-common": "^1.7.10",
     "myst-frontmatter": "^1.7.10",
     "myst-to-jats": "^1.0.33",
+    "node-fetch": "^3.3.2",
     "unist-builder": "^4.0.0",
     "uuid": "^10.0.0",
     "vfile": "^5.0.0"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.5",
     "@types/inquirer": "^9.0.7",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.13",

@@ -4,12 +4,14 @@ import chalk from 'chalk';
 import { clirun, getSession } from 'myst-cli-utils';
 import type { ISession } from 'myst-cli-utils';
 import { validateDeposit } from 'crossref-utils';
+import { schemaBundleForDepositXml } from './schemas.js';
 
 export async function validateAgainstXsdWrapper(session: ISession, file: string) {
   if (!fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
   const xml = fs.readFileSync(file, 'utf8');
-  session.log.info(`🧐 Validating deposit XML in-process against Crossref XSD`);
-  const result = await validateDeposit(xml);
+  const { version, schema } = await schemaBundleForDepositXml(xml, session.log);
+  session.log.info(`🧐 Validating against Crossref schema ${version} (caller-supplied bundle)`);
+  const result = await validateDeposit(xml, schema);
   if (result.ok) {
     session.log.info(chalk.greenBright('XML validation passed!'));
     return;

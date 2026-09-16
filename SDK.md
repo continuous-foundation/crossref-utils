@@ -107,7 +107,11 @@ function suggestDois(count: number, prefix: string): string[];
 ## `validateDeposit`
 
 ```ts
-function validateDeposit(xml: string): Promise<ValidationResult>;
+function validateDeposit(xml: string, schema: DepositSchema): Promise<ValidationResult>;
+
+type DepositSchema =
+  | string
+  | { entry: string; imports?: Record<string, string> };
 
 type ValidationResult = {
   ok: boolean;
@@ -115,11 +119,11 @@ type ValidationResult = {
 };
 ```
 
-Validates deposit XML **in process** against Crossref schema **5.3.1** using **xerces-wasm** (no `xmllint`). Schemas are downloaded once into a local cache on first use.
+Validates deposit XML **in process** with **xerces-wasm**. **You supply the schema** (entry XSD text, ideally plus `imports` for includes). The library does **not** download schemas.
 
-**Runtimes:** xerces-wasm runs on **Node ≥ 18** and can run in the **browser**; our wrapper is **Node / Node-serverless first** (uses filesystem + cache). See [`docs/validation.md`](./docs/validation.md) for the full write-up (Vercel caveats, WASM bundling, schema includes).
+Use `schemaVersionFromXml(xml)` if you need to pick which bundle to load. The CLI downloads/caches the Crossref `schemas/` tree and builds a bundle; apps can vendor a fixed version instead.
 
-Independent of builders — validate XML from `DoiBatch.toXml()` or any other source.
+See [`docs/validation.md`](./docs/validation.md).
 
 ---
 
@@ -149,7 +153,8 @@ const batch = new DoiBatch(
 );
 
 const xml = batch.toXml();
-const { ok, errors } = await validateDeposit(xml);
+// App supplies a vendored DepositSchema for the schema version it emits
+const { ok, errors } = await validateDeposit(xml, schemaBundle);
 if (!ok) throw new Error(errors.map((e) => e.message).join('\n'));
 ```
 

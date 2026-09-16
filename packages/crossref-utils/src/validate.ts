@@ -1,10 +1,18 @@
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import fetch from 'node-fetch';
-import AdmZip from 'adm-zip';
-
-const DEFAULT_XSD_VERSION = '5.3.1';
+/**
+ * In-memory Crossref schema set for validation.
+ * Callers (CLI or app) supply these — the library does not download schemas.
+ *
+ * Prefer a bundle with `imports` so `xsd:include` / `xsd:import` resolve
+ * (common*.xsd, fundref, JATS, etc.). A bare entry string alone is usually incomplete.
+ */
+export type DepositSchema =
+  | string
+  | {
+      /** Main schema document text, e.g. contents of `crossref5.3.1.xsd`. */
+      entry: string;
+      /** Map of schema filename → file text for includes/imports. */
+      imports?: Record<string, string>;
+    };
 
 export type ValidationIssue = {
   message: string;
@@ -18,60 +26,27 @@ export type ValidationResult = {
   errors: ValidationIssue[];
 };
 
-function packageDir() {
-  return path.dirname(fileURLToPath(import.meta.url));
-}
+const DEFAULT_XSD_VERSION = '5.3.1';
 
-function schemaCacheDir() {
-  return path.join(packageDir(), '..', 'schemas-cache');
-}
-
-function xsdFolder() {
-  return path.join(schemaCacheDir(), 'schema-master-schemas', 'schemas');
-}
-
-function xsdFile(version: string) {
-  return `crossref${version}.xsd`;
-}
-
-function localXsdFile(version: string) {
-  return path.join(xsdFolder(), xsdFile(version));
-}
-
-function schemaVersionFromXml(xml: string): string {
+/**
+ * Read Crossref schema version from deposit XML `xmlns`, or default to 5.3.1.
+ * Useful for CLIs / apps that resolve which schema bundle to load.
+ */
+export function schemaVersionFromXml(xml: string, fallback = DEFAULT_XSD_VERSION): string {
   const matches = new RegExp(
     /xmlns="http:\/\/www\.crossref\.org\/schema\/(?<version>[0-9]+\.[0-9]+\.[0-9]+)"/,
   ).exec(xml);
-  return matches?.groups?.version ?? DEFAULT_XSD_VERSION;
+  return matches?.groups?.version ?? fallback;
 }
 
 /**
- * Download Crossref XSD schemas into a local cache (once).
+ * Validate deposit XML in-process against a caller-supplied XSD (or schema bundle).
+ * No network and no filesystem access.
  */
-export async function ensureSchemas(version: string = DEFAULT_XSD_VERSION): Promise<string> {
-  if (fs.existsSync(localXsdFile(version))) return localXsdFile(version);
-  fs.mkdirSync(schemaCacheDir(), { recursive: true });
-  const url = 'https://gitlab.com/crossref/schema/-/archive/master/schema-master.zip?path=schemas';
-  const zipFile = path.join(schemaCacheDir(), 'archive.zip');
-  const resp = await fetch(url);
-  if (!resp.ok) {
-    throw new Error(`Failed to download Crossref schemas: ${resp.status} ${resp.statusText}`);
-  }
-  const buffer = Buffer.from(await resp.arrayBuffer());
-  fs.writeFileSync(zipFile, buffer);
-  const zip = new AdmZip(zipFile);
-  zip.extractAllTo(schemaCacheDir());
-  if (!fs.existsSync(localXsdFile(version))) {
-    throw new Error(`XSD not found after download: ${localXsdFile(version)}`);
-  }
-  return localXsdFile(version);
-}
-
-/**
- * Validate deposit XML in-process against Crossref XSD (no xmllint).
- */
-export async function validateDeposit(xml: string): Promise<ValidationResult> {
-  // Fast path: reject malformed XML without downloading schemas
+export async function validateDeposit(
+  xml: string,
+  schema: DepositSchema,
+): Promise<ValidationResult> {
   try {
     const { fromXml } = await import('xast-util-from-xml');
     fromXml(xml);
@@ -82,33 +57,21 @@ export async function validateDeposit(xml: string): Promise<ValidationResult> {
     };
   }
 
-  const version = schemaVersionFromXml(xml);
-  let xsdPath: string;
-  try {
-    xsdPath = await ensureSchemas(version);
-  } catch (err) {
-    return {
-      ok: false,
-      errors: [
-        {
-          message: `Unable to load Crossref XSD ${version}: ${err instanceof Error ? err.message : String(err)}`,
-        },
-      ],
-    };
-  }
-  const xsdText = fs.readFileSync(xsdPath, 'utf8');
-
   try {
     const xerces = await import('xerces-wasm');
-    const validate = (xerces as any).validate as (
+    const validate = xerces.validate as (
       xmlText: string,
-      xsdText: string,
+      xsd: string | { entry: string; imports?: Record<string, string> },
     ) => Promise<{
       valid: boolean;
       parseErrors?: { message: string; line?: number; column?: number }[];
       schemaErrors?: { message: string; line?: number; column?: number }[];
     }>;
-    const result = await validate(xml, xsdText);
+
+    const xsdInput =
+      typeof schema === 'string' ? schema : { entry: schema.entry, imports: schema.imports };
+
+    const result = await validate(xml, xsdInput);
     const errors: ValidationIssue[] = [
       ...(result.parseErrors ?? []).map((e) => ({
         message: e.message,
@@ -127,7 +90,7 @@ export async function validateDeposit(xml: string): Promise<ValidationResult> {
       ok: false,
       errors: [
         {
-          message: `XSD engine unavailable (${err instanceof Error ? err.message : String(err)}). Schema cached at ${xsdPath}; ensure xerces-wasm is installed.`,
+          message: `XSD engine unavailable (${err instanceof Error ? err.message : String(err)}). Ensure xerces-wasm is installed.`,
         },
       ],
     };
