@@ -18,6 +18,7 @@
     "lint:format": "prettier --check \"packages/**/*.{ts,tsx,md}\" \"*.md\" \"docs/**/*.md\"",
     "changeset": "changeset",
     "version": "changeset version && npm install",
+    "release": "npm run build && changeset publish",
     "publish": "npm run build && npm run test && changeset publish && git push --follow-tags"
   },
   "devDependencies": {
