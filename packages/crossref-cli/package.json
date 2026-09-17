@@ -29,8 +29,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.ts*\" -c ../../.eslintrc.cjs",
-    "build": "npm run clean && esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --packages=external",
-    "dev": "esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --packages=external --watch"
+    "build": "npm run clean && esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --external:fsevents --external:xerces-wasm",
+    "dev": "esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --external:fsevents --external:xerces-wasm --watch"
   },
   "bugs": {
     "url": "https://github.com/continuous-foundation/crossref-utils/issues"
