@@ -6,7 +6,9 @@ import { normalize } from 'doi-utils';
 import { contributorsXmlFromMystAuthors } from './contributors.js';
 import { dateXml } from './dates.js';
 import { createFundingXml, fundrefFromMyst } from './funding.js';
-import type { ISession } from 'myst-cli';
+import type { Logger } from './logger.js';
+import type { DoiDataResolver } from './doi.js';
+import { resolveDoiData } from './doi.js';
 
 /**
  * Create posted content xml
@@ -92,10 +94,11 @@ export function preprintXml({
 }
 
 export function preprintFromMyst(
-  session: ISession,
+  logger: Logger,
   myst: ProjectFrontmatter,
   citations?: Record<string, string>,
   abstract?: Element,
+  opts?: { resolveDoiData?: DoiDataResolver },
 ) {
   const { title, subtitle, license, doi, date } = myst;
   const contributors = contributorsXmlFromMystAuthors(myst);
@@ -106,7 +109,7 @@ export function preprintFromMyst(
     date: typeof date === 'string' ? new Date(date) : undefined,
     license: license?.content?.url,
     abstract,
-    funding: fundrefFromMyst(session, myst),
+    funding: fundrefFromMyst(logger, myst),
   };
   if (license && license.content?.CC) {
     // Only put in CC licenses at this time
@@ -114,10 +117,7 @@ export function preprintFromMyst(
   }
   const normalizedDoi = normalize(doi);
   if (normalizedDoi) {
-    paperOpts.doi_data = {
-      doi: normalizedDoi,
-      resource: `https://doi.curvenote.com/${normalizedDoi}`,
-    };
+    paperOpts.doi_data = resolveDoiData(normalizedDoi, opts?.resolveDoiData);
   }
   if (citations && Object.keys(citations).length) {
     paperOpts.citations = citations;

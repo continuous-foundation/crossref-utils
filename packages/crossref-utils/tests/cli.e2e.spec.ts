@@ -3,10 +3,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { describe, test, expect, beforeAll } from 'vitest';
 
-const fixturesRoot = path.join(process.cwd(), 'tests/fixtures');
+const packageRoot = process.cwd();
+const fixturesRoot = path.join(packageRoot, 'tests/fixtures');
 const goldenRoot = path.join(fixturesRoot, 'golden');
-const cliBin = path.join(process.cwd(), 'dist/crossref.cjs');
-const repoRoot = process.cwd();
+const cliBin = path.join(packageRoot, '../crossref-cli/dist/crossref.cjs');
+const repoRoot = path.join(packageRoot, '../..');
 
 const RECORD = process.env.RECORD_GOLDEN === '1';
 

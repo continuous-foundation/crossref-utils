@@ -1,4 +1,3 @@
-import { customAlphabet } from 'nanoid';
 import { u } from 'unist-builder';
 import type { Element } from 'xast';
 
@@ -22,20 +21,5 @@ export function e(name: string, attributes = {}, children?: string | any[]): Ele
   return u('element', { name, attributes }, children?.filter((c) => !!c) as Element[]);
 }
 
-// For letters and numbers that conflict, the letters were eliminated:
-// 0 not O/Q, 1 not I/L, 2 not Z, 5 not S, 8 not B
-const alpha = 'acdefghjkmnprtuvwxy';
-const numbers = '23456789';
-const nanoidAZ = customAlphabet(alpha, 4);
-const nanoidAZ9 = customAlphabet(numbers, 4);
-
-export function generateDoi(prefix: string) {
-  return `${prefix}/${nanoidAZ()}${nanoidAZ9()}`;
-}
-
-export function curvenoteDoiData(doi: string) {
-  return {
-    doi,
-    resource: `https://doi.curvenote.com/${doi}`,
-  };
-}
+export { generateDoi, suggestDois, resolveDoiData } from './doi.js';
+export type { DoiDataResolver } from './doi.js';

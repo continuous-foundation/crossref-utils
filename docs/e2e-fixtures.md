@@ -11,7 +11,7 @@ Regression fixtures for `crossref deposit` (and later `validate`). Kept **compac
 ## Layout
 
 ```
-tests/fixtures/
+packages/crossref-utils/tests/fixtures/
   shared/
     proceedings.yml          # SciPy-like venue / volume / editors (synthetic)
   conference/
@@ -52,8 +52,9 @@ tests/fixtures/
 npm test                  # unit + e2e (builds CLI for e2e)
 npm run test:unit         # unit only
 npm run test:e2e          # e2e only (builds CLI first)
-npm run test:e2e:record   # regenerates tests/fixtures/golden/*.xml
+npm run test:e2e:record   # regenerates packages/crossref-utils/tests/fixtures/golden/*.xml
 ```
+
 
 `test:e2e:record` should only be used intentionally (e.g. when deposit XML shape changes on purpose).
 

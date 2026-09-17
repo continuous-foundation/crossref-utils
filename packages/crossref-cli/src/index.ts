@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import version from '../version.js';
+import { version } from 'crossref-utils';
 import { addParseCLI } from './parse.js';
 import { addValidateCLI } from './validate.js';
 import { addDepositCLI } from './deposit.js';
