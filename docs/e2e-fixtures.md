@@ -46,12 +46,13 @@ tests/fixtures/
 - **Stable batch id** via `--id` in tests; **normalize** `timestamp` (and any remaining UUIDs) before comparing to goldens.
 - Depositor flags use CLI defaults or explicit `--name` / `--email` / `--registrant`.
 
-## Recording / updating goldens
+## Running
 
 ```bash
-npm run build
+npm test                  # unit + e2e (builds CLI for e2e)
+npm run test:unit         # unit only
+npm run test:e2e          # e2e only (builds CLI first)
 npm run test:e2e:record   # regenerates tests/fixtures/golden/*.xml
-npm run test:e2e          # compares against committed goldens
 ```
 
 `test:e2e:record` should only be used intentionally (e.g. when deposit XML shape changes on purpose).
