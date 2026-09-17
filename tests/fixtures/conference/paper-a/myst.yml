@@ -1,0 +1,31 @@
+version: 1
+extends: ../../shared/proceedings.yml
+project:
+  title: Compact fixtures for Crossref conference deposits
+  subtitle: A short synthetic article
+  description: |
+    Synthetic fixture abstract used for CLI end-to-end regression tests.
+  first_page: 1
+  last_page: 8
+  doi: 10.99999/fixture.paper-a
+  date: 2025-07-10
+  authors:
+    - name: Ada Author
+      email: ada@example.org
+      orcid: 0000-0001-2345-6789
+      corresponding: true
+      affiliations:
+        - Example University
+    - name: Blake Writer
+      email: blake@example.org
+      orcid: 0000-0002-3456-7890
+      affiliations:
+        - Example Lab
+  affiliations:
+    - id: Example University
+      name: Example University
+      ror: https://ror.org/05ggc9x63
+    - id: Example Lab
+      name: Example Lab
+  toc:
+    - file: main.md

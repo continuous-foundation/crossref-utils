@@ -1,0 +1,20 @@
+version: 1
+project:
+  title: Compact dataset fixture
+  description: Synthetic dataset record for CLI e2e tests.
+  doi: 10.99999/fixture.dataset
+  date: 2025-02-01
+  zenodo: https://zenodo.org/records/9999999
+  venue:
+    title: Example Research Data Repository
+    doi: 10.99999/example-data
+  authors:
+    - name: Sam Scientist
+      email: sam@example.org
+      affiliations:
+        - Example Data Lab
+  affiliations:
+    - id: Example Data Lab
+      name: Example Data Lab
+  toc:
+    - file: main.md

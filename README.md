@@ -6,6 +6,8 @@
 
 Utilities for creating crossref.org deposit metadata from node or the command line.
 
+CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](./docs/e2e-fixtures.md).
+
 To use from the command line, use the `-g` to create a global install.
 
 ```

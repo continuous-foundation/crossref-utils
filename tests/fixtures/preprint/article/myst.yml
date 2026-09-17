@@ -1,0 +1,18 @@
+version: 1
+project:
+  title: Compact preprint fixture
+  description: Synthetic preprint for CLI e2e tests.
+  doi: 10.99999/fixture.preprint
+  date: 2025-01-15
+  authors:
+    - name: Riley Researcher
+      email: riley@example.org
+      orcid: 0000-0006-7890-1234
+      affiliations:
+        - Example Preprint Lab
+  affiliations:
+    - id: Example Preprint Lab
+      name: Example Preprint Lab
+  license: CC-BY-4.0
+  toc:
+    - file: main.md
