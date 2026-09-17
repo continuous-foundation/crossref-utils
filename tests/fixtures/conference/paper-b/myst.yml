@@ -1,0 +1,38 @@
+version: 1
+extends: ../../shared/proceedings.yml
+project:
+  title: Second fixture paper with funding
+  subtitle: Equal contributors and awards
+  description: Second synthetic article for multi-paper conference deposits.
+  first_page: 9
+  last_page: 12
+  doi: 10.99999/fixture.paper-b
+  date: 2025-07-10
+  authors:
+    - name: Casey Coauthor
+      email: casey@example.org
+      orcid: 0000-0003-4567-8901
+      equal_contributor: true
+      affiliations:
+        - Example Institute
+    - name: Dana Coauthor
+      email: dana@example.org
+      orcid: 0000-0004-5678-9012
+      equal_contributor: true
+      affiliations:
+        - Example Institute
+  affiliations:
+    - id: Example Institute
+      name: Example Institute
+      ror: https://ror.org/02mhbdp94
+    - id: Example Fund
+      name: Example Fund
+      institution: Example Funding Agency
+  funding:
+    - statement: Supported by Example Fund.
+      awards:
+        - id: EF-2025-001
+          sources:
+            - Example Fund
+  toc:
+    - file: main.md

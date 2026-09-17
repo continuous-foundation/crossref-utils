@@ -1,0 +1,29 @@
+version: 1
+project:
+  title: Compact journal fixture article
+  description: Synthetic journal article for CLI e2e tests.
+  first_page: 10
+  last_page: 15
+  doi: 10.99999/fixture.journal-article
+  date: 2025-03-01
+  venue:
+    title: Example Journal of Computing
+    short_title: ExJ Comp
+    doi: 10.99999/exjcomp
+  volume:
+    number: 12
+  issue:
+    number: 3
+    doi: 10.99999/exjcomp.12.3
+  authors:
+    - name: Jordan Journaler
+      email: jordan@example.org
+      orcid: 0000-0005-6789-0123
+      affiliations:
+        - Example College
+  affiliations:
+    - id: Example College
+      name: Example College
+  license: CC-BY-4.0
+  toc:
+    - file: main.md
