@@ -1,6 +1,7 @@
 # crossref utilities
 
 [![crossref-utils on npm](https://img.shields.io/npm/v/crossref-utils.svg)](https://www.npmjs.com/package/crossref-utils)
+[![crossref-utils-sdk on npm](https://img.shields.io/npm/v/crossref-utils-sdk.svg)](https://www.npmjs.com/package/crossref-utils-sdk)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/continuous-foundation/crossref-utils/blob/main/LICENSE)
 [![CI](https://github.com/continuous-foundation/crossref-utils/workflows/CI/badge.svg)](https://github.com/continuous-foundation/crossref-utils/actions)
 
@@ -8,27 +9,26 @@ Utilities for creating crossref.org deposit metadata from Node or the command li
 
 This repository is a monorepo:
 
-| Package | Role |
-|---------|------|
-| [`crossref-utils`](./packages/crossref-utils) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
-| [`crossref-cli`](./packages/crossref-cli) | `crossref` CLI (filesystem, myst-cli, prompts) |
+| Package                                               | Role                                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`crossref-utils`](./packages/crossref-utils)         | `crossref` CLI (filesystem, myst-cli, prompts)                              |
+| [`crossref-utils-sdk`](./packages/crossref-utils-sdk) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
 
 Library API details: [`SDK.md`](./SDK.md). Implementation notes: [`plan-sdk.md`](./plan-sdk.md). Validation / xerces-wasm: [`docs/validation.md`](./docs/validation.md).  
 CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](./docs/e2e-fixtures.md).
 
 ```bash
-# Library (serverless / headless)
-npm install crossref-utils
-
 # CLI
-npm install -g crossref-cli
-# (during transition, `crossref` bin ships from crossref-cli)
+npm install -g crossref-utils
+
+# Library (serverless / headless)
+npm install crossref-utils-sdk
 ```
 
 To use from the command line after a global install:
 
 ```
-npm install -g crossref-cli
+npm install -g crossref-utils
 ```
 
 ## Creating a deposit

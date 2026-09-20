@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/crossref-utils" },
-    { "path": "./packages/crossref-cli" }
+    { "path": "./packages/crossref-utils-sdk" },
+    { "path": "./packages/crossref-utils" }
   ]
 }

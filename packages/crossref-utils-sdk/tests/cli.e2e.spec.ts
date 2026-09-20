@@ -6,7 +6,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 const packageRoot = process.cwd();
 const fixturesRoot = path.join(packageRoot, 'tests/fixtures');
 const goldenRoot = path.join(fixturesRoot, 'golden');
-const cliBin = path.join(packageRoot, '../crossref-cli/dist/crossref.cjs');
+const cliBin = path.join(packageRoot, '../crossref-utils/dist/crossref.cjs');
 const repoRoot = path.join(packageRoot, '../..');
 
 const RECORD = process.env.RECORD_GOLDEN === '1';

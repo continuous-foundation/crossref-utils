@@ -1,0 +1,66 @@
+{
+  "name": "crossref-utils-sdk",
+  "version": "0.0.3",
+  "license": "MIT",
+  "description": "In-memory utilities for creating and validating Crossref deposit metadata",
+  "author": "Rowan Cockett <rowan@continuousfoundation.org>",
+  "homepage": "https://github.com/continuous-foundation/crossref-utils",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "CrossRef",
+    "DOI"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/continuous-foundation/crossref-utils.git",
+    "directory": "packages/crossref-utils-sdk"
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "test": "vitest run && npm run test:e2e",
+    "test:unit": "vitest run",
+    "test:e2e": "npm run build -w crossref-utils-sdk && npm run build -w crossref-utils && vitest run --config vitest.e2e.config.ts",
+    "test:e2e:record": "npm run build -w crossref-utils-sdk && npm run build -w crossref-utils && RECORD_GOLDEN=1 vitest run --config vitest.e2e.config.ts",
+    "test:watch": "vitest watch",
+    "lint": "eslint \"src/**/*.ts*\" -c ../../.eslintrc.cjs",
+    "build:esm": "tsc --project ./tsconfig.json",
+    "build": "npm-run-all -l clean build:esm"
+  },
+  "bugs": {
+    "url": "https://github.com/continuous-foundation/crossref-utils/issues"
+  },
+  "dependencies": {
+    "@types/xast": "^2.0.4",
+    "css-selector-parser": "^3.0.5",
+    "doi-utils": "^2.0.5",
+    "myst-cli-utils": "^2.0.11",
+    "myst-common": "^1.7.10",
+    "myst-frontmatter": "^1.7.10",
+    "myst-to-jats": "^1.0.33",
+    "nanoid": "^5.0.5",
+    "unist-builder": "^4.0.0",
+    "unist-util-select": "^5.1.0",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^5.0.0",
+    "xast-util-from-xml": "^4.0.0",
+    "xast-util-to-xml": "^4.0.0",
+    "xerces-wasm": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.13"
+  }
+}

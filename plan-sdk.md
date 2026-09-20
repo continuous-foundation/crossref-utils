@@ -1,5 +1,10 @@
 # Plan: Package split for headless Crossref utils
 
+> **Historical note:** this plan predates the final naming. As shipped, the `crossref` CLI keeps the
+> `crossref-utils` npm name (`packages/crossref-utils`) and the library is published as
+> `crossref-utils-sdk` (`packages/crossref-utils-sdk`). Package names below are the ones under discussion
+> at planning time.
+
 Revised implementation plan after [PR #27 review](https://github.com/continuous-foundation/crossref-utils/pull/27) (Franklin Koch). Aligns with [`SDK.md`](./SDK.md).
 
 ## Goals
@@ -24,7 +29,7 @@ Revised implementation plan after [PR #27 review](https://github.com/continuous-
 > Gut check: easier than a long facade plan — an initial package split gets ~90% of the way there.
 
 1. Tear the single package into `-cli` (FS + interactivity) and `-utils` (everything else). Keep interfaces mostly unchanged.
-2. Massage details: decouple abstract *extraction* (CLI / upstream MyST) from light mdast→JATS transforms (utils); swap MyST `Session` for a logger interface on adapters; injectable DOI resource resolution.
+2. Massage details: decouple abstract _extraction_ (CLI / upstream MyST) from light mdast→JATS transforms (utils); swap MyST `Session` for a logger interface on adapters; injectable DOI resource resolution.
 3. Land TS-native (or otherwise in-process) XSD validation on `-utils`; retire reliance on `xmllint` for the library API.
 
 ---
@@ -109,23 +114,23 @@ Agreed direction (Franklin option 2 + prior spike):
 
 ## Suggested order
 
-1. Monorepo scaffolding + move files (utils vs cli)  
-2. Logger refactor + Curvenote resource/prefix cleanup  
-3. Extract `abstractFromMdast`; slim CLI deposit path  
-4. `generateDoi` / `suggestDois` (prefix required); CLI uses them  
-5. Validation spike → implement `validateDeposit` on utils  
-6. Docs (`SDK.md`, README) + changesets  
+1. Monorepo scaffolding + move files (utils vs cli)
+2. Logger refactor + Curvenote resource/prefix cleanup
+3. Extract `abstractFromMdast`; slim CLI deposit path
+4. `generateDoi` / `suggestDois` (prefix required); CLI uses them
+5. Validation spike → implement `validateDeposit` on utils
+6. Docs (`SDK.md`, README) + changesets
 
 ## Test plan
 
-- [ ] Workspace build/publish layout for both packages  
-- [ ] Existing unit tests pass under `crossref-utils`  
-- [ ] CLI deposit/generate/validate still work against workspace utils  
-- [ ] `abstractFromMdast` fixture; CLI no longer duplicates transform logic  
-- [ ] `*FromMyst` works with logger only (no Session)  
-- [ ] No Curvenote URL/prefix defaults in utils  
-- [ ] `validateDeposit` catches known-bad deposit XML; known-good passes  
-- [ ] Serverless-shaped usage: import utils only, no FS  
+- [ ] Workspace build/publish layout for both packages
+- [ ] Existing unit tests pass under `crossref-utils`
+- [ ] CLI deposit/generate/validate still work against workspace utils
+- [ ] `abstractFromMdast` fixture; CLI no longer duplicates transform logic
+- [ ] `*FromMyst` works with logger only (no Session)
+- [ ] No Curvenote URL/prefix defaults in utils
+- [ ] `validateDeposit` catches known-bad deposit XML; known-good passes
+- [ ] Serverless-shaped usage: import utils only, no FS
 
 ## Open decisions (small)
 
@@ -134,7 +139,7 @@ Agreed direction (Franklin option 2 + prior spike):
 
 ## Explicitly dropped from prior spike plan
 
-- `crossref-utils/sdk` subpath entry  
-- New `DepositInput` / `buildDeposit` / `mystToDepositItem` facade types  
-- Bundling DOI prefix alias constants into the library  
-- Treating MyST frontmatter JSON as the *only* primary SDK input (both Crossref DTOs and MyST adapters remain)
+- `crossref-utils/sdk` subpath entry
+- New `DepositInput` / `buildDeposit` / `mystToDepositItem` facade types
+- Bundling DOI prefix alias constants into the library
+- Treating MyST frontmatter JSON as the _only_ primary SDK input (both Crossref DTOs and MyST adapters remain)

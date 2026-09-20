@@ -1,20 +1,18 @@
-export * from './batch.js';
-export * from './conference.js';
-export * from './contributors.js';
-export * from './dates.js';
-export * from './preprint.js';
-export * from './reader.js';
-export * from './types.js';
-export * from './journal.js';
-export * from './dataset.js';
-export * from './funding.js';
-export * from './abstract.js';
-export * from './doi.js';
-export * from './logger.js';
-export { validateDeposit, schemaVersionFromXml } from './validate.js';
-export type { ValidationResult, ValidationIssue, DepositSchema } from './validate.js';
-export { e, t } from './utils.js';
-export { default as version } from './version.js';
+#!/usr/bin/env node
+import { Command } from 'commander';
+import version from './version.js';
+import { addParseCLI } from './parse.js';
+import { addValidateCLI } from './validate.js';
+import { addDepositCLI } from './deposit.js';
+import { addGenerateCLI } from './generate.js';
 
-/** MyST frontmatter → Crossref adapters */
-export * as fromMyst from './fromMyst/index.js';
+const program = new Command();
+
+addDepositCLI(program);
+addParseCLI(program);
+addValidateCLI(program);
+addGenerateCLI(program);
+
+program.version(`v${version}`, '-v, --version', 'Print the current version of crossref-utils');
+program.option('-d, --debug', 'Log out any errors to the console.');
+program.parse(process.argv);

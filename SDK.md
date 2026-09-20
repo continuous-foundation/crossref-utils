@@ -1,4 +1,4 @@
-# crossref-utils (library API)
+# crossref-utils-sdk (library API)
 
 Developer-facing docs for the **in-memory** Crossref library after the planned monorepo split. See [`plan-sdk.md`](./plan-sdk.md) for the implementation plan.
 
@@ -17,10 +17,10 @@ import {
   generateDoi,
   suggestDois,
   validateDeposit,
-} from 'crossref-utils';
+} from 'crossref-utils-sdk';
 ```
 
-CLI (filesystem, myst-cli, prompts) lives in a separate package (`crossref-cli`) and depends on this library. Prefer importing **`crossref-utils` only** from serverless / headless code.
+The `crossref` CLI (filesystem, myst-cli, prompts) lives in a separate package (`crossref-utils`) and depends on this library. Prefer importing **`crossref-utils-sdk` only** from serverless / headless code.
 
 ## Architecture
 
@@ -40,7 +40,7 @@ CLI (filesystem, myst-cli, prompts) lives in a separate package (`crossref-cli`)
                                 └─────────────────────────┘
 ```
 
-**Important separation:** MyST (or any other) *content processing* stays outside the Crossref core. Adapters only map already-structured frontmatter (and helpers like `abstractFromMdast` for processed mdast) into Crossref shapes. That leaves room for other X→Crossref parsers without bloating the core.
+**Important separation:** MyST (or any other) _content processing_ stays outside the Crossref core. Adapters only map already-structured frontmatter (and helpers like `abstractFromMdast` for processed mdast) into Crossref shapes. That leaves room for other X→Crossref parsers without bloating the core.
 
 There is **no** separate `buildDeposit` facade or new deposit DTO layer — use the existing Crossref types + `*Xml`, and/or `*FromMyst`.
 
@@ -109,9 +109,7 @@ function suggestDois(count: number, prefix: string): string[];
 ```ts
 function validateDeposit(xml: string, schema: DepositSchema): Promise<ValidationResult>;
 
-type DepositSchema =
-  | string
-  | { entry: string; imports?: Record<string, string> };
+type DepositSchema = string | { entry: string; imports?: Record<string, string> };
 
 type ValidationResult = {
   ok: boolean;
@@ -136,7 +134,7 @@ import {
   abstractFromMdast,
   generateDoi,
   validateDeposit,
-} from 'crossref-utils';
+} from 'crossref-utils-sdk';
 
 const doi = generateDoi(process.env.DOI_PREFIX!); // review before use
 const abstract = abstractFromMdast(abstractMdast);
@@ -162,23 +160,23 @@ Multi-article journal/conference deposits: build venue/issue XML with existing h
 
 ---
 
-## What belongs in `crossref-cli` (not this library)
+## What belongs in `crossref-utils` (the CLI, not this library)
 
-- Path discovery, reading `myst.yml` / pages from disk  
-- myst-cli `Session`, `getFileContent`, part extraction from projects  
-- `parseMyst` for frontmatter abstract strings  
-- inquirer prompts (deposit type, depositor, DOI checkbox selection)  
-- Writing DOIs back into config files  
+- Path discovery, reading `myst.yml` / pages from disk
+- myst-cli `Session`, `getFileContent`, part extraction from projects
+- `parseMyst` for frontmatter abstract strings
+- inquirer prompts (deposit type, depositor, DOI checkbox selection)
+- Writing DOIs back into config files
 
-The CLI should call into `crossref-utils` for XML build, abstract mdast→JATS, DOI string generation, and validation.
+The CLI should call into `crossref-utils-sdk` for XML build, abstract mdast→JATS, DOI string generation, and validation.
 
 ---
 
 ## Package relationship
 
-| Package | Role |
-|---------|------|
-| `crossref-utils` | In-memory Crossref core + MyST adapter + validate |
-| `crossref-cli` | `crossref` binary; FS + interactive workflows |
+| Package              | Role                                              |
+| -------------------- | ------------------------------------------------- |
+| `crossref-utils-sdk` | In-memory Crossref core + MyST adapter + validate |
+| `crossref-utils`     | `crossref` binary; FS + interactive workflows     |
 
-Root import of `crossref-utils` is the supported library surface (no `/sdk` subpath required).
+Root import of `crossref-utils-sdk` is the supported library surface (no `/sdk` subpath required).

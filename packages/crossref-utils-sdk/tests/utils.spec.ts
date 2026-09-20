@@ -38,7 +38,6 @@ describe('CrossRef Utilities', () => {
   });
 });
 
-
 describe('DOI helpers', () => {
   test('generateDoi uses provided prefix', () => {
     const doi = generateDoi('10.1234');

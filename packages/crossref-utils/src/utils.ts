@@ -1,25 +1,13 @@
-import { u } from 'unist-builder';
-import type { Element } from 'xast';
+import fs from 'node:fs';
 
-export function t(value: string) {
-  return u('text', value);
+export function addDoiToConfig(configFile: string, doi: string) {
+  const file = fs.readFileSync(configFile).toString();
+  const lines = file.split('\n');
+  const projectIndex = lines.findIndex((line) => line.trim() === 'project:');
+  const newLines = [
+    ...lines.slice(0, projectIndex + 1),
+    `  doi: ${doi}`,
+    ...lines.slice(projectIndex + 1),
+  ];
+  fs.writeFileSync(configFile, newLines.join('\n'));
 }
-export function e(name: string, children?: string | any[]): Element;
-export function e(
-  name: string,
-  attributes: Record<string, any>,
-  children?: string | any[],
-): Element;
-export function e(name: string, attributes = {}, children?: string | any[]): Element {
-  if ((children === undefined && typeof attributes === 'string') || Array.isArray(attributes)) {
-    children = attributes;
-    attributes = {};
-  }
-  if (typeof children === 'string') {
-    return u('element', { name, attributes }, [t(children)]);
-  }
-  return u('element', { name, attributes }, children?.filter((c) => !!c) as Element[]);
-}
-
-export { generateDoi, suggestDois, resolveDoiData } from './doi.js';
-export type { DoiDataResolver } from './doi.js';

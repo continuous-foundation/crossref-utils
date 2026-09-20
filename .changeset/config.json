@@ -1,8 +1,8 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
+  "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [["crossref-utils", "crossref-utils-sdk"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
