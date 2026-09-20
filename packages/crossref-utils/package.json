@@ -40,7 +40,6 @@
     "adm-zip": "^0.5.10",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
-    "crossref-utils-sdk": "0.0.3",
     "doi-utils": "^2.0.5",
     "inquirer": "^9.2.23",
     "js-yaml": "^4.1.0",
@@ -52,7 +51,8 @@
     "node-fetch": "^3.3.2",
     "unist-builder": "^4.0.0",
     "uuid": "^10.0.0",
-    "vfile": "^5.0.0"
+    "vfile": "^5.0.0",
+    "xerces-wasm": "^2.0.1"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
@@ -60,6 +60,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.13",
     "@types/uuid": "^10.0.0",
+    "crossref-utils-sdk": "0.0.3",
     "esbuild": "^0.20.0"
   }
 }
