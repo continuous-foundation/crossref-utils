@@ -38,11 +38,11 @@ import {
   type DatabaseOptions,
   type DoiData,
   type JournalIssue,
-} from 'crossref-utils';
+} from 'crossref-utils-sdk';
 import { addDoiToConfig } from './utils.js';
 import { selectNewDois } from './generate.js';
 
-/** CLI default landing-page resolver (org-specific; not in crossref-utils). */
+/** CLI default landing-page resolver (org-specific; not in crossref-utils-sdk). */
 function curvenoteDoiData(doi: string): DoiData {
   return { doi, resource: `https://doi.curvenote.com/${doi}` };
 }
@@ -116,7 +116,7 @@ export async function depositArticleFromSource(session: ISession, depositSource:
     const title = projectFrontmatter?.title ?? frontmatter?.title;
     // Prioritize project subtitle over page subtitle unless project has no title
     const subtitle = projectFrontmatter?.title
-      ? projectFrontmatter?.subtitle ?? undefined
+      ? (projectFrontmatter?.subtitle ?? undefined)
       : frontmatter?.subtitle;
     frontmatter = { ...fileContent.frontmatter, title, subtitle };
     abstractPart = extractPart(fileContent.mdast, 'abstract', {

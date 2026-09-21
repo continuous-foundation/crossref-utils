@@ -2,22 +2,22 @@
 
 ## Responsibility split
 
-| Layer | Role |
-|-------|------|
-| **`crossref-utils` (SDK)** | `validateDeposit(xml, schema)` — in-process XSD check via xerces-wasm. **No network, no schema download.** Caller must pass schema text / bundle. |
-| **`crossref-cli` (or your app)** | Obtain schemas (download, vendor, or cache), pick version, pass a `DepositSchema` into the SDK. |
+| Layer                                       | Role                                                                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`crossref-utils-sdk` (SDK)**              | `validateDeposit(xml, schema)` — in-process XSD check via xerces-wasm. **No network, no schema download.** Caller must pass schema text / bundle. |
+| **`crossref-utils` (the CLI, or your app)** | Obtain schemas (download, vendor, or cache), pick version, pass a `DepositSchema` into the SDK.                                                   |
 
 That lets the CLI keep **multi-version** support (resolve version from deposit `xmlns`, load matching files from a cached Crossref `schemas/` tree), while another app can **vendor a single bundle** (e.g. 5.5.0) for the XML it produces.
 
 ## SDK API
 
 ```ts
-import { validateDeposit, schemaVersionFromXml, type DepositSchema } from 'crossref-utils';
+import { validateDeposit, schemaVersionFromXml, type DepositSchema } from 'crossref-utils-sdk';
 
 // Prefer a bundle so includes/imports resolve (common*.xsd, fundref, JATS, …)
 const schema: DepositSchema = {
-  entry: crossrefXsdText,           // e.g. contents of crossref5.3.1.xsd
-  imports: { 'common5.3.1.xsd': commonText, 'fundref.xsd': fundrefText, /* … */ },
+  entry: crossrefXsdText, // e.g. contents of crossref5.3.1.xsd
+  imports: { 'common5.3.1.xsd': commonText, 'fundref.xsd': fundrefText /* … */ },
 };
 
 const { ok, errors } = await validateDeposit(xml, schema);
@@ -31,9 +31,9 @@ A bare `string` entry is accepted but is usually **incomplete** for full Crossre
 
 `crossref validate <file>`:
 
-1. Reads the deposit XML  
-2. Downloads the Crossref GitLab `schemas/` zip **once** into `~/.cache/crossref-cli/schemas/` (if missing)  
-3. Builds a `DepositSchema` bundle for the XML’s schema version  
+1. Reads the deposit XML
+2. Downloads the Crossref GitLab `schemas/` zip **once** into `~/.cache/crossref-utils/schemas/` (if missing)
+3. Builds a `DepositSchema` bundle for the XML’s schema version
 4. Calls `validateDeposit(xml, schema)`
 
 ## Why xerces-wasm?
@@ -42,8 +42,8 @@ Real XSD 1.0 validation without native `node-gyp` addons or shelling to `xmllint
 
 ### Serverless (e.g. Vercel)
 
-- Pass a **vendored** `DepositSchema` (no GitLab download in the function).  
-- Ensure `xerces-wasm`’s `.wasm` asset is included in the function bundle.  
+- Pass a **vendored** `DepositSchema` (no GitLab download in the function).
+- Ensure `xerces-wasm`’s `.wasm` asset is included in the function bundle.
 - Cold start: first WASM + XSD compile is heavier; warm isolates help.
 
 ## Crossref schema versions

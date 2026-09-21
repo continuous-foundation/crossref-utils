@@ -8,12 +8,12 @@
   ],
   "scripts": {
     "clean": "npm run clean --workspaces --if-present",
-    "build": "npm run build -w crossref-utils && npm run build -w crossref-cli",
-    "test": "npm run test -w crossref-utils",
-    "test:unit": "npm run test:unit -w crossref-utils",
-    "test:e2e": "npm run test:e2e -w crossref-utils",
-    "test:e2e:record": "npm run test:e2e:record -w crossref-utils",
-    "test:watch": "npm run test:watch -w crossref-utils",
+    "build": "npm run build -w crossref-utils-sdk && npm run build -w crossref-utils",
+    "test": "npm run test -w crossref-utils-sdk",
+    "test:unit": "npm run test:unit -w crossref-utils-sdk",
+    "test:e2e": "npm run test:e2e -w crossref-utils-sdk",
+    "test:e2e:record": "npm run test:e2e:record -w crossref-utils-sdk",
+    "test:watch": "npm run test:watch -w crossref-utils-sdk",
     "lint": "npm run lint --workspaces --if-present",
     "lint:format": "prettier --check \"packages/**/*.{ts,tsx,md}\" \"*.md\" \"docs/**/*.md\"",
     "changeset": "changeset",
@@ -22,7 +22,7 @@
     "publish": "npm run build && npm run test && changeset publish && git push --follow-tags"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.1",
+    "@changesets/cli": "^3.0.3",
     "@types/adm-zip": "^0.5.5",
     "@types/inquirer": "^9.0.7",
     "@types/js-yaml": "^4.0.9",

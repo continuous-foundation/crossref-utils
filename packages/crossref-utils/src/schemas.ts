@@ -3,14 +3,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import fetch from 'node-fetch';
 import AdmZip from 'adm-zip';
-import type { DepositSchema } from 'crossref-utils';
-import { schemaVersionFromXml } from 'crossref-utils';
+import type { DepositSchema } from 'crossref-utils-sdk';
+import { schemaVersionFromXml } from 'crossref-utils-sdk';
 
 const SCHEMA_ZIP_URL =
   'https://gitlab.com/crossref/schema/-/archive/master/schema-master.zip?path=schemas';
 
 function schemaCacheRoot() {
-  return path.join(os.homedir(), '.cache', 'crossref-cli', 'schemas');
+  return path.join(os.homedir(), '.cache', 'crossref-utils', 'schemas');
 }
 
 function schemasDir() {

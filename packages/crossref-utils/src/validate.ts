@@ -1,98 +1,37 @@
-/**
- * In-memory Crossref schema set for validation.
- * Callers (CLI or app) supply these — the library does not download schemas.
- *
- * Prefer a bundle with `imports` so `xsd:include` / `xsd:import` resolve
- * (common*.xsd, fundref, JATS, etc.). A bare entry string alone is usually incomplete.
- */
-export type DepositSchema =
-  | string
-  | {
-      /** Main schema document text, e.g. contents of `crossref5.3.1.xsd`. */
-      entry: string;
-      /** Map of schema filename → file text for includes/imports. */
-      imports?: Record<string, string>;
-    };
+import fs from 'node:fs';
+import { Command } from 'commander';
+import chalk from 'chalk';
+import { clirun, getSession } from 'myst-cli-utils';
+import type { ISession } from 'myst-cli-utils';
+import { validateDeposit } from 'crossref-utils-sdk';
+import { schemaBundleForDepositXml } from './schemas.js';
 
-export type ValidationIssue = {
-  message: string;
-  path?: string;
-  line?: number;
-  column?: number;
-};
-
-export type ValidationResult = {
-  ok: boolean;
-  errors: ValidationIssue[];
-};
-
-const DEFAULT_XSD_VERSION = '5.3.1';
-
-/**
- * Read Crossref schema version from deposit XML `xmlns`, or default to 5.3.1.
- * Useful for CLIs / apps that resolve which schema bundle to load.
- */
-export function schemaVersionFromXml(xml: string, fallback = DEFAULT_XSD_VERSION): string {
-  const matches = new RegExp(
-    /xmlns="http:\/\/www\.crossref\.org\/schema\/(?<version>[0-9]+\.[0-9]+\.[0-9]+)"/,
-  ).exec(xml);
-  return matches?.groups?.version ?? fallback;
+export async function validateAgainstXsdWrapper(session: ISession, file: string) {
+  if (!fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  const xml = fs.readFileSync(file, 'utf8');
+  const { version, schema } = await schemaBundleForDepositXml(xml, session.log);
+  session.log.info(`🧐 Validating against Crossref schema ${version} (caller-supplied bundle)`);
+  const result = await validateDeposit(xml, schema);
+  if (result.ok) {
+    session.log.info(chalk.greenBright('XML validation passed!'));
+    return;
+  }
+  result.errors.forEach((err) => {
+    const loc =
+      err.line != null ? ` (line ${err.line}${err.column != null ? `:${err.column}` : ''})` : '';
+    session.log.error(`${err.message}${loc}`);
+  });
+  throw new Error('XML validation failed.');
 }
 
-/**
- * Validate deposit XML in-process against a caller-supplied XSD (or schema bundle).
- * No network and no filesystem access.
- */
-export async function validateDeposit(
-  xml: string,
-  schema: DepositSchema,
-): Promise<ValidationResult> {
-  try {
-    const { fromXml } = await import('xast-util-from-xml');
-    fromXml(xml);
-  } catch (parseErr: any) {
-    return {
-      ok: false,
-      errors: [{ message: `XML parse error: ${parseErr?.message ?? String(parseErr)}` }],
-    };
-  }
+function makeValidateCLI(program: Command) {
+  const command = new Command('validate')
+    .description('Validate a crossref deposit file against the XSD')
+    .argument('<file>', 'Crossref deposit file to validate')
+    .action(clirun(validateAgainstXsdWrapper, { program, getSession }));
+  return command;
+}
 
-  try {
-    const xerces = await import('xerces-wasm');
-    const validate = xerces.validate as (
-      xmlText: string,
-      xsd: string | { entry: string; imports?: Record<string, string> },
-    ) => Promise<{
-      valid: boolean;
-      parseErrors?: { message: string; line?: number; column?: number }[];
-      schemaErrors?: { message: string; line?: number; column?: number }[];
-    }>;
-
-    const xsdInput =
-      typeof schema === 'string' ? schema : { entry: schema.entry, imports: schema.imports };
-
-    const result = await validate(xml, xsdInput);
-    const errors: ValidationIssue[] = [
-      ...(result.parseErrors ?? []).map((e) => ({
-        message: e.message,
-        line: e.line,
-        column: e.column,
-      })),
-      ...(result.schemaErrors ?? []).map((e) => ({
-        message: e.message,
-        line: e.line,
-        column: e.column,
-      })),
-    ];
-    return { ok: !!result.valid && errors.length === 0, errors };
-  } catch (err) {
-    return {
-      ok: false,
-      errors: [
-        {
-          message: `XSD engine unavailable (${err instanceof Error ? err.message : String(err)}). Ensure xerces-wasm is installed.`,
-        },
-      ],
-    };
-  }
+export function addValidateCLI(program: Command) {
+  program.addCommand(makeValidateCLI(program));
 }

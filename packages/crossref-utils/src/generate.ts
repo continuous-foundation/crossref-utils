@@ -2,10 +2,10 @@ import { Command } from 'commander';
 import inquirer from 'inquirer';
 import type { ISession } from 'myst-cli-utils';
 import { clirun, getSession } from 'myst-cli-utils';
-import { generateDoi, suggestDois } from 'crossref-utils';
+import { generateDoi, suggestDois } from 'crossref-utils-sdk';
 import { plural } from 'myst-common';
 
-/** Caller/org config — not part of crossref-utils library. */
+/** Caller/org config — not part of the crossref-utils-sdk library. */
 const PREFIX: Record<string, string> = {
   curvenote: '10.62329',
   msa: '10.69761',
