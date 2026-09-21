@@ -1,6 +1,6 @@
 {
   "name": "crossref-utils",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "license": "MIT",
   "description": "CLI for creating Crossref deposit metadata from MyST projects",
   "author": "Rowan Cockett <rowan@continuousfoundation.org>",
@@ -62,7 +62,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.13",
     "@types/uuid": "^10.0.0",
-    "crossref-utils-sdk": "0.0.3",
+    "crossref-utils-sdk": "0.1.0",
     "esbuild": "^0.20.0"
   }
 }

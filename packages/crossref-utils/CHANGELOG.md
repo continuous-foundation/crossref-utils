@@ -1,5 +1,15 @@
 # crossref-utils
 
+## 0.1.0
+
+### Minor Changes
+
+- 086d722: Split into monorepo packages for headless library use: `crossref-utils-sdk` (in-memory builders, MyST adapters, `abstractFromMdast`, DOI helpers, `validateDeposit`) and `crossref-utils` (the `crossref` CLI — filesystem / interactive workflows). Remove Curvenote DOI resource defaults from the library; callers pass `resolveDoiData`.
+
+### Patch Changes
+
+- e33e28f: Accept files and folders as arguments to `crossref deposit`, deprecating `--file`
+
 ## 0.0.3
 
 ### Patch Changes

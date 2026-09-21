@@ -1,6 +1,6 @@
 {
   "name": "crossref-utils-sdk",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "license": "MIT",
   "description": "In-memory utilities for creating and validating Crossref deposit metadata",
   "author": "Rowan Cockett <rowan@continuousfoundation.org>",
