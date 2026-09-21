@@ -9,13 +9,13 @@ Utilities for creating crossref.org deposit metadata from Node or the command li
 
 This repository is a monorepo:
 
-| Package                                               | Role                                                                        |
-| ----------------------------------------------------- | --------------------------------------------------------------------------- |
-| [`crossref-utils`](./packages/crossref-utils)         | `crossref` CLI (filesystem, myst-cli, prompts)                              |
-| [`crossref-utils-sdk`](./packages/crossref-utils-sdk) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
+| Package                                                                                                               | Role                                                                        |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [`crossref-utils`](https://github.com/continuous-foundation/crossref-utils/tree/main/packages/crossref-utils)         | `crossref` CLI (filesystem, myst-cli, prompts)                              |
+| [`crossref-utils-sdk`](https://github.com/continuous-foundation/crossref-utils/tree/main/packages/crossref-utils-sdk) | In-memory library (Crossref XML builders, MyST adapters, `validateDeposit`) |
 
-Library API details: [`SDK.md`](./SDK.md). Implementation notes: [`plan-sdk.md`](./plan-sdk.md). Validation / xerces-wasm: [`docs/validation.md`](./docs/validation.md).  
-CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](./docs/e2e-fixtures.md).
+Library API details: [`SDK.md`](https://github.com/continuous-foundation/crossref-utils/blob/main/SDK.md). Implementation notes: [`plan-sdk.md`](https://github.com/continuous-foundation/crossref-utils/blob/main/plan-sdk.md). Validation / xerces-wasm: [`docs/validation.md`](https://github.com/continuous-foundation/crossref-utils/blob/main/docs/validation.md).  
+CLI e2e fixtures and golden XML: [`docs/e2e-fixtures.md`](https://github.com/continuous-foundation/crossref-utils/blob/main/docs/e2e-fixtures.md).
 
 ```bash
 # CLI

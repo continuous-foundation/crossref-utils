@@ -1,0 +1,6 @@
+# Build artefacts
+dist
+
+# Copied from the repo root at build/pack time — format the originals instead
+packages/*/README.md
+packages/*/LICENSE

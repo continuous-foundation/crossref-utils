@@ -38,3 +38,7 @@ _build
 
 .yalc
 yalc.lock
+
+# README/LICENSE are copied into each package at build/pack time; the repo root is the source of truth
+packages/*/README.md
+packages/*/LICENSE
