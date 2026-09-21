@@ -6,4 +6,4 @@ abstract: |
 
 # Body
 
-Journal fixture body with a DOI citation [](doi:10.1145/3290605.3300233).
+Journal fixture body with a DOI citation [@Amershi_2019].

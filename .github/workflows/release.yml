@@ -90,6 +90,11 @@ jobs:
       - name: Build packages
         run: npm run build
 
+      # The Version Packages PR is opened with GITHUB_TOKEN, so it never triggers CI.
+      # Gate publishing here instead: a failure stops pack, and publish needs pack.
+      - name: Run tests
+        run: npm run test
+
       - name: Pack packages
         id: pack
         uses: changesets/action/pack@v2

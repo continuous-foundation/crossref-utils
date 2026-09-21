@@ -11,13 +11,21 @@ const repoRoot = path.join(packageRoot, '../..');
 
 const RECORD = process.env.RECORD_GOLDEN === '1';
 
-/** Strip nondeterministic deposit head fields for stable comparisons. */
+/** Strip nondeterministic deposit fields for stable comparisons. */
 export function normalizeDepositXml(xml: string): string {
-  return xml
-    .replace(/<doi_batch_id>[^<]*<\/doi_batch_id>/g, '<doi_batch_id>FIXED_BATCH_ID</doi_batch_id>')
-    .replace(/<timestamp>[^<]*<\/timestamp>/g, '<timestamp>0</timestamp>')
-    .replace(/\r\n/g, '\n')
-    .trim();
+  return (
+    xml
+      .replace(
+        /<doi_batch_id>[^<]*<\/doi_batch_id>/g,
+        '<doi_batch_id>FIXED_BATCH_ID</doi_batch_id>',
+      )
+      .replace(/<timestamp>[^<]*<\/timestamp>/g, '<timestamp>0</timestamp>')
+      .replace(/\r\n/g, '\n')
+      // One element per line, so a failed assertion produces a readable line diff instead of
+      // two multi-kilobyte strings truncated to '<doi_batch xmlns:xsi="http://www.w3.o…'.
+      .replace(/></g, '>\n<')
+      .trim()
+  );
 }
 
 function runDeposit(args: string[]): string {

@@ -7,6 +7,23 @@ Regression fixtures for `crossref deposit` (and later `validate`). Kept **compac
 - Exercise real CLI → MyST load → deposit XML path
 - Capture **golden XML from `main`** for regression against refactors (e.g. monorepo split)
 - Stay small and maintainable (&lt; ~100KB text)
+- Run **offline and deterministically** — see [Citations](#citations) below
+
+## Citations
+
+Cited works are declared in a local `references.bib` next to each fixture and referenced as
+`[@Key]`. They are deliberately **not** written as `[](doi:...)` links.
+
+A bare `doi:` link makes myst-cli resolve the DOI over the network and derive the citation key
+from the `id` field of whatever CSL JSON comes back. That key is not stable across environments —
+the same fixture produced `LeCun_2015` locally and `LeCun2015Deep` in CI, which failed the golden
+comparison during a release. DOI resolution is a myst-cli/citation-js concern, not something this
+project produces, so the fixtures pin it rather than test it.
+
+Keep it that way: no fixture should need the network. If you add a cited work, add a `.bib` entry
+with a `DOI` field. To check nothing reaches out, delete `_build/` and run the suite — myst-cli
+caches every DOI fetch in `_build/cache/doi-*.csl.json`, so that directory staying empty means no
+lookups happened.
 
 ## Layout
 
@@ -16,9 +33,11 @@ packages/crossref-utils-sdk/tests/fixtures/
     proceedings.yml          # SciPy-like venue / volume / editors (synthetic)
   conference/
     paper-a/                 # ORCID, affiliations, pages, abstract, DOI cites
+      references.bib         # local bibliography (see Citations)
     paper-b/                 # equal_contributor, funding, subtitle
   journal/
     article/
+      references.bib
   preprint/
     article/
   dataset/
