@@ -9,6 +9,7 @@
   "scripts": {
     "clean": "npm run clean --workspaces --if-present",
     "build": "npm run build -w crossref-utils-sdk && npm run build -w crossref-utils",
+    "dev": "npm run dev -w crossref-utils",
     "test": "npm run test -w crossref-utils-sdk",
     "test:unit": "npm run test:unit -w crossref-utils-sdk",
     "test:e2e": "npm run test:e2e -w crossref-utils-sdk",

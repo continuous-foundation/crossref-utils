@@ -31,7 +31,9 @@
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.ts*\" -c ../../.eslintrc.cjs",
     "build": "npm run clean && npm run copy:docs && npm run copy:version && esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --external:fsevents --external:xerces-wasm",
-    "dev": "npm run copy:version && esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --external:fsevents --external:xerces-wasm --watch",
+    "unlink": "npm uninstall -g crossref-utils;",
+    "link": "npm run unlink; npm link;",
+    "dev": "npm run copy:version && npm run link && esbuild src/index.ts --bundle --outfile=dist/crossref.cjs --platform=node --external:fsevents --external:xerces-wasm --watch",
     "copy:docs": "cp ../../README.md ../../LICENSE .",
     "prepack": "npm run copy:docs"
   },
